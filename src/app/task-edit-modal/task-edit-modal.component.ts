@@ -75,7 +75,7 @@ export class TaskEditModalComponent implements OnInit {
   isEndAfterStart(): boolean {
     const start = this.fromNgbDate(this.taskForm.value.start);
     const end = this.fromNgbDate(this.taskForm.value.end);
-    return !!start && !!end && end > start;
+    return !!start && !!end && end >= start;
   }
 
   onCancel() {
