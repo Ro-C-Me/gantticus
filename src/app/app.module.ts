@@ -3,7 +3,8 @@ import { BrowserModule } from '@angular/platform-browser';
 import { AppComponent } from './app.component';
 import { GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttLinkLineType, NgxGanttModule } from '@worktile/gantt';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { FormsModule } from '@angular/forms';
+import { FormsModule,  ReactiveFormsModule  } from '@angular/forms';
+import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
 
 @NgModule({
   declarations: [
@@ -13,7 +14,8 @@ import { FormsModule } from '@angular/forms';
     BrowserModule,
     NgxGanttModule,
     NgbModule,
-    FormsModule
+    FormsModule,
+    ReactiveFormsModule
   ],
   providers : [
     {
