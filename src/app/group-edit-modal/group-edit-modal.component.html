@@ -1,0 +1,22 @@
+<div class="modal-header">
+    <h5 class="modal-title">Gruppe bearbeiten</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="onCancel()"></button>
+  </div>
+  
+  <div class="modal-body">
+    <form [formGroup]="groupForm" novalidate>
+      <div class="mb-3">
+        <label for="title" class="form-label">Titel</label>
+        <input id="title" type="text" class="form-control" formControlName="title" />
+        <div *ngIf="groupForm.get('title')?.invalid && groupForm.get('title')?.touched" class="text-danger">
+          Titel ist erforderlich.
+        </div>
+      </div>
+    </form>
+  </div>
+  
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="onCancel()">Abbrechen</button>
+    <button type="button" class="btn btn-primary" (click)="onOk()">OK</button>
+  </div>
+  

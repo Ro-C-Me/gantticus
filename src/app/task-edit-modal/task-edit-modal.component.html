@@ -1,0 +1,61 @@
+<div class="modal-header">
+    <h5 class="modal-title">Task bearbeiten</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="onCancel()"></button>
+  </div>
+  
+  <div class="modal-body">
+    <form [formGroup]="taskForm" novalidate>
+      <div class="mb-3">
+        <label for="title" class="form-label">Titel</label>
+        <input id="title" type="text" class="form-control" formControlName="title" />
+        <div *ngIf="taskForm.get('title')?.invalid && taskForm.get('title')?.touched" class="text-danger">
+          Titel ist erforderlich.
+        </div>
+      </div>
+  
+      <div class="row mb-3">
+        <div class="col">
+          <label for="start" class="form-label">von</label>
+          <input id="start"
+                 class="form-control"
+                 formControlName="start"
+                 ngbDatepicker
+                 #d1="ngbDatepicker"
+                 placeholder="yyyy-mm-dd"
+                 (click)="d1.toggle()" />
+          <div *ngIf="taskForm.get('start')?.invalid && taskForm.get('start')?.touched" class="text-danger">
+            Startdatum ist erforderlich.
+          </div>
+        </div>
+        <div class="col">
+          <label for="end" class="form-label">bis</label>
+          <input id="end"
+                 class="form-control"
+                 formControlName="end"
+                 ngbDatepicker
+                 #d2="ngbDatepicker"
+                 placeholder="yyyy-mm-dd"
+                 (click)="d2.toggle()" />
+          <div *ngIf="taskForm.get('end')?.invalid && taskForm.get('end')?.touched" class="text-danger">
+            Enddatum ist erforderlich.
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-check mb-3">
+        <input
+          id="milestone"
+          type="checkbox"
+          class="form-check-input"
+          formControlName="milestone"
+        />
+        <label for="milestone" class="form-check-label">Meilenstein</label>
+      </div>
+    </form>
+  </div>
+  
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="onCancel()">Abbrechen</button>
+    <button type="button" class="btn btn-primary" (click)="onOk()">OK</button>
+  </div>
+  

@@ -1,9 +1,19 @@
 <div class="app-container d-flex flex-column vh-100">
 <nav class="navbar navbar-expand-lg bg-body-tertiary mb-3" style="border-bottom: 1px solid #dee2e6;">
   <div class="container-fluid">
-    <button class="btn btn-primary" (click)="onAddTask()">
-      <i class="bi bi-plus-lg"></i> Neuer Task
-    </button>
+    <div ngbDropdown class="btn-group">
+      <button class="btn btn-primary" (click)="onAddTask()">
+        <i class="bi bi-plus-lg"></i> Neuer Task
+      </button>
+      <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" ngbDropdownToggle>
+        <span class="visually-hidden">Dropdown öffnen</span>
+      </button>
+      <div ngbDropdownMenu>
+        <button class="dropdown-item" (click)="onAddTask()">Task hinzufügen</button>
+        <button class="dropdown-item" (click)="onAddGroup()">Gruppe hinzufügen</button>
+      </div>
+    </div>
+    
 
     <div class="ms-auto">
       <select class="form-select w-auto" [(ngModel)]="viewType" name="viewType">
@@ -15,10 +25,10 @@
   </div>
 </nav>
 
-<ngx-gantt #gantt [items]="items" [viewType]="viewType">
+<ngx-gantt #gantt [items]="items" [viewType]="viewType" [draggable]="true" (dragStarted)="dragStarted($event)" (dragEnded)="dragEnded($event)">
   <ngx-gantt-table >
     <ngx-gantt-column name="ID" width="100px">
-      <ng-template #cell let-item="item"> {{ item.id }} </ng-template>
+      <ng-template #cell let-item="item" > <div (click)="onIdClick(item.id)">{{ item.id }}</div> </ng-template>
     </ngx-gantt-column>
     <ngx-gantt-column name="Title" width="200px">
       <ng-template #cell let-item="item"> {{ item.title }} </ng-template>
