@@ -1,10 +1,16 @@
+export interface BaseItem {
+  id: string;
+  type: 'task' | 'group';
+}
 export class Task {
+    readonly type = 'task';
+
     id: string;
     title: string = '';
     computedStart : Date;
     computedEnd : Date;
 
-    dependsOn : Task[];
+    dependsOn : string[];
 
     start?: Date;
     end?: Date;
@@ -22,16 +28,30 @@ export class Task {
       this.dependsOn = init?.dependsOn ?? [];
     }
 
+    toBaseItem() : BaseItem {
+      return {id : this.id, type : 'task'};
+    }
   }
 
   export class Group {
+    readonly type = 'group';
+
     id: string = '';
     title: string = '';
 
-    children : (Task | Group) [];
+    children : BaseItem [];
 
-    constructor(init?: Partial<Task>) {
+    constructor(init?: Partial<Group>) {
       Object.assign(this, init);
-      this.children = [];
+      if (init?.children == undefined) {
+        this.children = [];
+      }
+      else {
+        this.children = init.children;
+      }
+    }
+
+    toBaseItem() : BaseItem {
+      return {id : this.id, type : 'group'};
     }
   }

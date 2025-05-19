@@ -25,8 +25,9 @@
   </div>
 </nav>
 
-<ngx-gantt #gantt [items]="items" [viewType]="viewType" [draggable]="true" (dragStarted)="dragStarted($event)" (dragEnded)="dragEnded($event)">
-  <ngx-gantt-table >
+<ngx-gantt #gantt [items]="items" [viewType]="viewType" [draggable]="true" (dragEnded)="dragEnded($event)"
+>
+  <ngx-gantt-table [draggable]="true" (dragDropped)="onRowDragDropped($event)">
     <ngx-gantt-column name="ID" width="100px">
       <ng-template #cell let-item="item" > <div (click)="onIdClick(item.id)">{{ item.id }}</div> </ng-template>
     </ngx-gantt-column>

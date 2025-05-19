@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit} from '@angular/core';
 import { NgbActiveModal, NgbDateStruct, NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -16,7 +16,12 @@ import { Task } from '../domain/Task';
   ]
 })
 export class TaskEditModalComponent implements OnInit {
+
   @Input() task!: Task;
+
+  @Input() tasks!: Task[];
+  
+  selectedDependencies : string[] = [];
 
   taskForm!: FormGroup;
 
@@ -29,6 +34,8 @@ export class TaskEditModalComponent implements OnInit {
       end: [this.toNgbDate(this.task.end), Validators.required],
       milestone: [this.task.milestone]
     });
+
+    this.selectedDependencies = this.task.dependsOn;
   }
 
   // Hilfsfunktion: Date zu NgbDateStruct
@@ -45,6 +52,23 @@ export class TaskEditModalComponent implements OnInit {
   fromNgbDate(ngbDate: NgbDateStruct): Date | null {
     if (!ngbDate) return null;
     return new Date(ngbDate.year, ngbDate.month - 1, ngbDate.day);
+  }
+
+  onDependencyToggle(depencyId: string,$event: Event) {
+    const checked = ($event.target as HTMLInputElement).checked;
+    console.log("dependency to " + depencyId + " changed to " + checked);
+    if (checked) {
+      this.selectedDependencies.push(depencyId);
+    }
+    else {
+      const index = this.selectedDependencies.indexOf(depencyId);
+      if (index > -1) {
+        this.selectedDependencies.splice(index, 1);
+      }
+    }
+
+    console.log(" current dependencies: ");
+    console.log(this.selectedDependencies);
   }
 
   // Validierung: Enddatum nach Startdatum
@@ -72,6 +96,10 @@ export class TaskEditModalComponent implements OnInit {
     this.task.start = this.fromNgbDate(this.taskForm.value.start)!;
     this.task.end = this.fromNgbDate(this.taskForm.value.end)!;
     this.task.milestone = this.taskForm.value.milestone;
+
+    console.log("task now depends on");
+    console.log(this.selectedDependencies);
+    console.log(this.task.dependsOn);
     this.activeModal.close(this.task);
   }
 }
