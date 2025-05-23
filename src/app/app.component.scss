@@ -1,1 +1,37 @@
 @use '@worktile/gantt/styles/index.scss';
+
+.navbar .dropdown-menu {
+    position: absolute;
+    right: 0;
+    left: auto; /* oder umgekehrt für links */
+  }
+  /* Optional: Maximale Breite und Textumbruch */
+  .max-dropdown-width {
+    max-width: 300px;
+  }
+  .text-wrap {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .cursor-pointer {
+    cursor: pointer;
+  }
+  .name-editable:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+  }
+  .name-editable i {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .name-editable:hover i {
+    opacity: 1;
+  }
+  
+  .input-h4 {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    padding: 0.375rem 0.75rem;
+    height: auto;
+  }

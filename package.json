@@ -22,8 +22,10 @@
     "@worktile/gantt": "^19.0.1",
     "bootstrap": "^5.3.6",
     "html2canvas": "^1.4.1",
+    "reflect-metadata": "^0.2.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "typedjson": "^1.8.0",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {

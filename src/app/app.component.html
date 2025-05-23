@@ -1,5 +1,79 @@
 <div class="app-container d-flex flex-column vh-100">
-<nav class="navbar navbar-expand-lg bg-body-tertiary mb-3" style="border-bottom: 1px solid #dee2e6;">
+  <nav class="navbar navbar-expand-lg bg-body-termiary border-bottom">
+    <div class="container-fluid">
+      <!-- App-Titel links -->
+      <a class="navbar-brand" href="#">{{ title }}</a>
+      <!-- Öffnen-Funktion rechts -->
+      <div class="ms-auto position-relative">
+        <div ngbDropdown class="btn-group">
+          <button class="btn btn-outline-secondary" ngbDropdownToggle>
+            <i class="bi bi-folder2-open"></i> Öffnen
+          </button>
+          <div ngbDropdownMenu class="dropdown-menu-end max-dropdown-width">
+            <button class="dropdown-item text-wrap" (click)="onOpenChart(chart)" *ngFor="let chart of availableCharts">
+              {{ chart.name }}
+            </button>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <header class="d-flex align-items-center p-3 mb-3 bg-light border-bottom">
+    <!-- Platzhalter links (für evtl. weitere Buttons) -->
+    <div class="flex-grow-1"></div>
+    <!-- Name des Charts, mittig und anklickbar -->
+    <div class="d-flex align-items-center">
+      <h1
+        class="h4 mb-0 text-center cursor-pointer name-editable"
+        *ngIf="!isEditingName"
+        (click)="onEditName()"
+        (keyup.enter)="onEditName()"
+        (keyup.space)="onEditName()"
+        tabindex="0"
+        aria-label="Name bearbeiten"
+        role="button"
+      >
+        {{ chart.name }}
+        <i class="bi bi-pencil-square ms-2"></i>
+      </h1>
+      <div *ngIf="isEditingName" class="d-flex align-items-center">
+        <input
+          type="text"
+          class="form-control form-control-sm input-h4 "
+          [(ngModel)]="chart.name"
+          (keyup.enter)="onSaveName(chart.name)"
+          (blur)="onSaveName(chart.name)"
+          #nameInput
+          (click)="$event.stopPropagation()"
+        />
+
+        <button class="btn btn-sm btn-success ms-2" (click)="onSaveName(chart.name)">
+          <i class="bi bi-check"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary ms-2" (click)="onCancelEdit()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Speichern-Button rechts -->
+    <div class="flex-grow-1 d-flex justify-content-end">
+      <button class="btn btn-outline-danger me-2" (click)="onDeleteChart(chart)">
+        <i class="bi bi-trash"></i> Löschen
+      </button>
+      <button class="btn btn-primary" (click)="onSave()">
+        <i class="bi bi-save"></i> Speichern
+      </button>
+    </div>
+  </header>
+  
+
+
+
+<div class="d-flex justify-content-between align-items-center p-2 mb-3 bg-light border rounded">
   <div class="container-fluid">
     <div ngbDropdown class="btn-group">
       <button class="btn btn-primary" (click)="onAddTask()">
@@ -13,17 +87,15 @@
         <button class="dropdown-item" (click)="onAddGroup()">Gruppe hinzufügen</button>
       </div>
     </div>
-    
-
-    <div class="ms-auto">
-      <select class="form-select w-auto" [(ngModel)]="viewType" name="viewType">
-        <option *ngFor="let option of viewTypeOptions" [ngValue]="option.value">
-          {{ option.label }}
-        </option>
-      </select>
-    </div>
   </div>
-</nav>
+  <div class="ms-auto">
+    <select class="form-select w-auto" [(ngModel)]="viewType" name="viewType">
+      <option *ngFor="let option of viewTypeOptions" [ngValue]="option.value">
+        {{ option.label }}
+      </option>
+    </select>
+  </div>
+</div>
 
 <ngx-gantt #gantt [items]="items" [viewType]="viewType" [draggable]="true" (dragEnded)="dragEnded($event)"
 >

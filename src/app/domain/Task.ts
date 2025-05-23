@@ -1,55 +1,67 @@
-export interface BaseItem {
-  id: string;
-  type: 'task' | 'group';
+import { jsonObject, jsonArrayMember, jsonMember } from 'typedjson';
+@jsonObject
+export class BaseItem {
+  @jsonMember
+  id: string = '';
+
+  @jsonMember({
+    deserializer: (value: any) => value as 'task' | 'group',
+    serializer: (value: 'task' | 'group') => value
+  })
+  type: 'task' | 'group' = 'task';
 }
+@jsonObject
 export class Task {
-    readonly type = 'task';
 
-    id: string;
+    @jsonMember
+    id: string = '';
+
+    @jsonMember
     title: string = '';
-    computedStart : Date;
-    computedEnd : Date;
 
-    dependsOn : string[];
+    @jsonMember
+    computedStart : Date = new Date();
 
+    @jsonMember
+    computedEnd : Date = new Date();
+
+    @jsonArrayMember(String)
+    dependsOn : string[] = [];
+
+    @jsonMember
     start?: Date;
-    end?: Date;
-    earliestBegin?: Date;
-    latestEnd?: Date;
-    duration?: number; // z.B. in Stunden oder Tagen
-    milestone: boolean = false;
 
-    constructor(init?: Partial<Task>) {
-      Object.assign(this, init);
-      this.id = init?.id ?? 'NO_REAL_ID';
-      this.computedStart = init?.computedStart ?? new Date();
-      this.computedEnd = init?.computedEnd ?? new Date();
-      this.milestone = init?.milestone ?? false;
-      this.dependsOn = init?.dependsOn ?? [];
-    }
+    @jsonMember
+    end?: Date;
+
+    @jsonMember
+    earliestBegin?: Date;
+
+    @jsonMember
+    latestEnd?: Date;
+
+    @jsonMember
+    duration?: number; // z.B. in Stunden oder Tagen
+
+    @jsonMember
+    milestone: boolean = false;
 
     toBaseItem() : BaseItem {
       return {id : this.id, type : 'task'};
     }
   }
 
-  export class Group {
-    readonly type = 'group';
+  @jsonObject
+    export class Group {
 
+    @jsonMember
     id: string = '';
+
+    @jsonMember
     title: string = '';
 
-    children : BaseItem [];
-
-    constructor(init?: Partial<Group>) {
-      Object.assign(this, init);
-      if (init?.children == undefined) {
-        this.children = [];
-      }
-      else {
-        this.children = init.children;
-      }
-    }
+    @jsonArrayMember(BaseItem)
+    children : BaseItem [] = [];
 
     toBaseItem() : BaseItem {
       return {id : this.id, type : 'group'};

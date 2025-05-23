@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild, ElementRef } from '@angular/core';
 import { NgxGanttModule, GanttItem, GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttItemType, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent } from '@worktile/gantt';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -6,7 +6,9 @@ import { BaseItem, Group, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
 import { GroupEditModalComponent } from './group-edit-modal/group-edit-modal.component';
-
+import { Chart } from './domain/Chart';
+import { ChartStorageService } from './chart-storage.service';
+import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog/confirm-chart-delete-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -16,12 +18,37 @@ import { GroupEditModalComponent } from './group-edit-modal/group-edit-modal.com
 })
 export class AppComponent {
 
-  title = 'gannticus';
+onDeleteChart(arg0: Chart) {
+  const modalRef = this.modalService.open(ConfirmChartDeleteDialogComponent, { size: 'sm' });
+  modalRef.componentInstance.title = 'Chart löschen';
+  modalRef.componentInstance.message = `Möchten Sie das Chart "${this.chart.name}" wirklich löschen?`;
+  modalRef.componentInstance.btnOkText = 'Löschen';
+  modalRef.componentInstance.btnCancelText = 'Abbrechen';
 
-  tasksById: Map<string, Task> = new Map();
-  groupsById : Map<string, Group> = new Map();
+  modalRef.result.then((confirmed) => {
+    if (confirmed) {
+      this.chartStorage.deleteChart(this.chart);
+      this.initWithNewChart();
+    }
+  }).catch(() => {
+    // Dialog wurde geschlossen ohne Bestätigung
+  });
+}
 
-  topLevelItems : BaseItem[] = [];
+availableCharts: {
+  id: string;
+  name: string;
+}[] = [];
+
+
+@ViewChild('nameInput') nameInput!: ElementRef<HTMLInputElement>;
+
+  title = 'Gannticus';
+
+  chart : Chart = new Chart();
+
+  isEditingName = false;
+
   items: GanttItem[] = [];
 
   viewTypeOptions = [
@@ -31,60 +58,97 @@ export class AppComponent {
     { label: 'Tag', value: GanttViewType.day }
   ];
 
-  viewType : GanttViewType= GanttViewType.day;
+  viewType : GanttViewType = GanttViewType.day;
 
-  constructor(private modalService: NgbModal) {
-    let task0 = new Task({ id: '000000', title: 'Task 0', start: new Date("2025-05-06"), end: new Date("2025-05-08")});
-    this.tasksById.set(task0.id, task0);
+  constructor(private modalService: NgbModal, private chartStorage: ChartStorageService) {
+    this.initWithNewChart();
+
+    this.availableCharts = this.chartStorage.getChartList();
+    let task0 = new Task();
+    task0.id = '000000';
+    task0.title = 'Task 0';
+    task0.start = new Date("2025-05-06");
+    task0.end = new Date("2025-05-08");
+    this.chart.tasks.push(task0);
+
     task0.computedStart = task0.start ? task0.start : new Date();
     task0.computedEnd = task0.end ? task0.end : new Date();
     
-    let task1 = new Task({ id: '000001', title: 'Task 1', start: new Date("2025-05-05"), end: new Date("2025-05-09")});
-    this.tasksById.set(task1.id, task1);
+    let task1 = new Task();
+    task1.id = '000001';
+    task1.title = 'Task 1';
+    task1.start = new Date("2025-05-05");
+    task1.end = new Date("2025-05-09");
+    this.chart.tasks.push(task1);
     task1.computedStart = task1.start ? task1.start : new Date();
     task1.computedEnd = task1.end ? task1.end : new Date();
     
-    let task2 = new Task({ id: '000002', title: 'Task 2', start: new Date("2025-05-10"), end: new Date("2025-05-10")});
-    this.tasksById.set(task2.id, task2);
+    let task2 = new Task();
+    task2.id = '000002';
+    task2.title = 'Task 2';
+    task2.start = new Date("2025-05-10");
+    task2.end = new Date("2025-05-10");
+    this.chart.tasks.push(task2);
     task2.computedStart = task2.start ? task2.start : new Date();
     task2.computedEnd = task2.end ? task2.end : new Date();
 
-    let task3 = new Task({ id: '000003', title: 'Task 3', start: new Date("2025-05-10"), end: new Date("2025-05-10"), milestone : true});
-    this.tasksById.set(task3.id, task3);
+    let task3 = new Task();
+    task3.id = '000003';
+    task3.title = 'Task 3';
+    task3.start = new Date("2025-05-10");
+    task3.end = new Date("2025-05-10");
+    task3.milestone = true;
+    this.chart.tasks.push(task3);
     task3.computedStart = task3.start ? task3.start : new Date();
     task3.computedEnd = task3.end ? task3.end : new Date();
 
-    let task4 = new Task({ id: '000004', title: 'Task 4', start: new Date("2025-05-25"), end: new Date("2025-05-25"), milestone : true});
-    this.tasksById.set(task4.id, task4);
+    let task4 = new Task();
+    task4.id = '000004';
+    task4.title = 'Task 4';
+    task4.start = new Date("2025-05-25");
+    task4.end = new Date("2025-05-25");
+    task4.milestone = true;
+    this.chart.tasks.push(task4);
     task4.computedStart = task4.start ? task4.start : new Date();
     task4.computedEnd = task4.end ? task4.end : new Date();
 
-    let group0 = new Group({id: 'group0', title: 'Group 0'});
+    let group0 = new Group();
+    group0.id = 'group0';
+    group0.title = 'Group 0';
     group0.children.push(task4.toBaseItem());
-    this.groupsById.set(group0.id, group0);
+    this.chart.groups.push(group0);
 
     task0.dependsOn.push(task1.id);
     task2.dependsOn.push(task1.id);
     task3.dependsOn.push(task1.id);
     task4.dependsOn.push(task1.id);
 
-    this.topLevelItems.push(task0.toBaseItem());
-    this.topLevelItems.push(task1.toBaseItem());
-    this.topLevelItems.push(task2.toBaseItem());
-    this.topLevelItems.push(task3.toBaseItem());
-    this.topLevelItems.push(group0.toBaseItem());
+    this.chart.topLevelItems.push(task0.toBaseItem());
+    this.chart.topLevelItems.push(task1.toBaseItem());
+    this.chart.topLevelItems.push(task2.toBaseItem());
+    this.chart.topLevelItems.push(task3.toBaseItem());
+    this.chart.topLevelItems.push(group0.toBaseItem());
     this.updateGanntItems();
+
   }
   
+  private initWithNewChart() {
+    this.chart = new Chart();
+    this.chart.id = this.createId();
+    this.chart.name = 'New Gantt chart';
+    this.updateGanntItems();
+  }
+
 onIdClick(id: string) {
   console.log("start editing " + id);
-  if (this.tasksById.has(id)) {
+  const task = this.getTaskById(id);
+  if (task) {
     console.log("edit a task");
-    this.startTaskEditDialog(this.tasksById.get(id)!);
+    this.startTaskEditDialog(task);
   }
-  else if (this.groupsById.has(id)) {
+  else if (this.getGroupById(id)) {
     console.log("edit a group");
-    this.startGroupEditDialog(this.groupsById.get(id)!);
+    this.startGroupEditDialog(this.getGroupById(id)!);
   }
   else {
     console.error("No known element with id " + id + " to edit");
@@ -95,11 +159,11 @@ onIdClick(id: string) {
     const modalRef = this.modalService.open(TaskEditModalComponent, { centered: true });
     // Kopie übergeben, damit Änderungen erst bei OK übernommen werden
     modalRef.componentInstance.task = { ...taskToEdit };
-    modalRef.componentInstance.tasks = Array.from(this.tasksById.values());
+    modalRef.componentInstance.tasks = this.chart.tasks;
 
     modalRef.result.then(
       (result) => {
-        this.tasksById.set(result.id, result);
+        this.replaceTaskById(result);
         
         this.recomputeTasks(result);
         this.updateGanntItems();
@@ -107,6 +171,26 @@ onIdClick(id: string) {
       (reason) => {
       }
     );
+  }
+
+  private replaceTaskById(task: Task) {
+    const index = this.chart.tasks.findIndex(t => t.id === task.id);
+    if (index == -1) {
+      console.log("Couldn't find task with id " + task.id);
+    }
+    else {
+      this.chart.tasks.splice(index, 1, task);
+    }
+  }
+  
+  private replaceGroupById(group: Group) {
+    const index = this.chart.groups.findIndex(g => g.id === group.id);
+    if (index == -1) {
+      console.log("Couldn't find task with id " + group.id);
+    }
+    else {
+      this.chart.groups.splice(index, 1, group);
+    }
   }
 
   private startGroupEditDialog(toEdit: Group) {
@@ -119,7 +203,7 @@ onIdClick(id: string) {
 
     modalRef.result.then(
       (result) => {
-        this.groupsById.set(result.id, result);
+        this.replaceGroupById(result);
         
         this.recomputeTasks(result);
         this.updateGanntItems();
@@ -127,6 +211,14 @@ onIdClick(id: string) {
       (reason) => {
       }
     );
+  }
+
+  getTaskById(id: string) : Task | undefined{
+    return this.chart.tasks.find(t => t.id == id);
+  }
+
+  getGroupById(id: string) : Group | undefined{
+    return this.chart.groups.find(t => t.id == id);
   }
 
   recomputeTasks(t: Task) {
@@ -139,7 +231,8 @@ onIdClick(id: string) {
       console.log($event);
       console.log($event.item.id + "now starts at " + $event.item.start + " and ends at " + $event.item.end);
 
-      const toChange = this.tasksById.get($event.item.id);
+      const toChange = this.getTaskById($event.item.id);
+      
       if (!toChange) {
         console.error("no task to change!");
       }
@@ -166,9 +259,9 @@ onIdClick(id: string) {
         console.log("drag dropped a row: " + id + " " + $event.dropPosition + " " + $event.target.id + " in " + $event.targetParent?.id);
         console.log($event);
 
-        let sourceParent : BaseItem[] = this.topLevelItems; 
-        if ($event.sourceParent && this.groupsById.has($event.sourceParent.id)) {
-          sourceParent = this.groupsById.get($event.sourceParent.id)!.children;
+        let sourceParent : BaseItem[] = this.chart.topLevelItems; 
+        if ($event.sourceParent && this.getGroupById($event.sourceParent.id)) {
+          sourceParent = this.getGroupById($event.sourceParent.id)!.children;
         }
         else{
           console.log("We use topLevel here");
@@ -184,20 +277,20 @@ onIdClick(id: string) {
         const toMove = sourceParent[sourceParentIndex];
         sourceParent.splice(sourceParentIndex, 1);
 
-        let targetParent : BaseItem[] = this.topLevelItems; 
+        let targetParent : BaseItem[] = this.chart.topLevelItems; 
         let targetIndex = 0;
 
         //inside a group or task
         if ($event.dropPosition == 'inside') {
-          let group = this.groupsById.get($event.target.id);
+          let group = this.getGroupById($event.target.id);
           if (group) {
             targetParent = group.children;
           }
         }
 
         else {
-          if ($event.targetParent && this.groupsById.has($event.targetParent.id)) {
-            targetParent = this.groupsById.get($event.targetParent.id)!.children;
+          if ($event.targetParent && this.getGroupById($event.targetParent.id)) {
+            targetParent = this.getGroupById($event.targetParent.id)!.children;
           }
 
           targetIndex = targetParent.findIndex(t => t.id == $event.target.id);
@@ -218,10 +311,14 @@ onIdClick(id: string) {
 
 
   onAddTask() {
-    let id = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-    let newTask: Task = new Task({ id: id, title: '', start: new Date("2025-05-01"), end: new Date("2025-05-15") });
-    this.tasksById.set(newTask.id, newTask);
-    this.topLevelItems.push({id : newTask.id, type: 'task'});
+    let id = this.createId();
+    let newTask: Task = new Task();
+    newTask.id = id;
+    newTask.title = '';
+    newTask.start = new Date("2025-05-01");
+    newTask.end = new Date("2025-05-15");
+    this.chart.tasks.push(newTask);
+    this.chart.topLevelItems.push({id : newTask.id, type: 'task'});
     newTask.computedStart = newTask.start ? newTask.start : new Date();
     newTask.computedEnd = newTask.end ? newTask.end : new Date();
     this.updateGanntItems();
@@ -229,31 +326,46 @@ onIdClick(id: string) {
 
   }
 
+  private createId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+  }
+
   onAddGroup() {
     let id = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-    let newGroup: Group = new Group({ id: id, title: '' });
-    this.topLevelItems.push({id : newGroup.id, type: 'group'});
+    let newGroup: Group = new Group();
+    newGroup.id = id;
+    newGroup.title = '';
+    this.chart.groups.push(newGroup);
+    this.chart.topLevelItems.push({id : newGroup.id, type: 'group'});
     this.updateGanntItems();
     this.startGroupEditDialog(newGroup);
   }
 
   updateGanntItems() {
-    let tasks : BaseItem[] = this.topLevelItems;
+    let tasks : BaseItem[] = this.chart.topLevelItems;
     let items :  GanttItem[] = [];
     let itemMap = new Map<string, GanttItem>();
-    let tasksById = this.tasksById;
-    let groupsById = this.groupsById;
 
-    updateGanntItems(tasks, items);
-    this.items = items;
 
-    function updateGanntItems(tasks: BaseItem[], items : GanttItem[]) {
+
+
+
+
+
+
+
+
+
+
+
+
+    const updateGanntItems = (tasks: BaseItem[], items: GanttItem[]) => {
       console.log("task length:" + tasks.length);
       console.log(tasks);
 
       tasks.forEach(entry => {
         if (entry.type == 'task') {
-          let task = tasksById.get(entry.id);
+          let task = this.getTaskById(entry.id);
           if (!task) {
             console.log("error: can't find task with id " + entry.id);
           }
@@ -279,7 +391,7 @@ onIdClick(id: string) {
         }
         else if (entry.type == 'group') {
           console.log("Found a group: " + entry.id);
-          let group = groupsById.get(entry.id);
+          let group = this.getGroupById(entry.id);
           if (!group) {
             console.log("error: can't find group with id " + entry.id);
           }
@@ -306,7 +418,10 @@ onIdClick(id: string) {
       console.log(items);
     }
 
-    Array.from(this.tasksById.values()).forEach(t => {
+    updateGanntItems(tasks, items);
+    this.items = items;
+
+    this.chart.tasks.forEach(t => {
       t.dependsOn.forEach(d => {
         let item = itemMap.get(d);
         if (!item) {
@@ -320,5 +435,35 @@ onIdClick(id: string) {
         }
       });
     });
+  }
+
+  onOpenChart(chart: { id: string; name: string; }) {
+    const loadedChart = this.chartStorage.getChart(chart.id);
+    if (!loadedChart) {
+      console.log("Couldn't find a chart with id "+ chart.id);
+    }
+    else {
+      this.chart =  loadedChart;
+      this.updateGanntItems();
+    }
+  }
+  onSave() {
+    console.log("Start saving");
+    this.chartStorage.saveChart(this.chart);
+    console.log("Finished saving");
+  }
+    
+  onEditName() {
+    this.isEditingName = true;
+    setTimeout(() => this.nameInput?.nativeElement.focus(), 0);
+  }
+  
+  onSaveName(newName: string) {
+    this.chart.name = newName;
+    this.isEditingName = false;
+  }
+  
+  onCancelEdit() {
+    this.isEditingName = false;
   }
 }
