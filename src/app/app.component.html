@@ -4,7 +4,7 @@
       <!-- App-Titel links -->
       <a class="navbar-brand" href="#">{{ title }}</a>
       <!-- Öffnen-Funktion rechts -->
-      <div class="ms-auto position-relative">
+      <div class="ms-auto position-relative d-flex align-items-center gap-2">
         <div ngbDropdown class="btn-group">
           <button class="btn btn-outline-secondary" ngbDropdownToggle>
             <i class="bi bi-folder2-open"></i> Öffnen
@@ -15,6 +15,9 @@
             </button>
           </div>
         </div>
+        <button class="btn btn-primary" (click)="onNewChart()">
+          <i class="bi bi-plus-lg"></i>
+        </button>
       </div>
       
     </div>
@@ -100,11 +103,8 @@
 <ngx-gantt #gantt [items]="items" [viewType]="viewType" [draggable]="true" (dragEnded)="dragEnded($event)"
 >
   <ngx-gantt-table [draggable]="true" (dragDropped)="onRowDragDropped($event)">
-    <ngx-gantt-column name="ID" width="100px">
-      <ng-template #cell let-item="item" > <div (click)="onIdClick(item.id)">{{ item.id }}</div> </ng-template>
-    </ngx-gantt-column>
     <ngx-gantt-column name="Title" width="200px">
-      <ng-template #cell let-item="item"> {{ item.title }} </ng-template>
+      <ng-template #cell let-item="item"> <div (click)="onTitleClick(item.id)"> {{ item.title }} </div></ng-template>
     </ngx-gantt-column>
   </ngx-gantt-table>
 </ngx-gantt>
