@@ -17,6 +17,9 @@ import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog
   standalone: false
 })
 export class AppComponent {
+onNewChart() {
+  this.initWithNewChart();
+}
 
 onDeleteChart(arg0: Chart) {
   const modalRef = this.modalService.open(ConfirmChartDeleteDialogComponent, { size: 'sm' });
@@ -139,7 +142,7 @@ availableCharts: {
     this.updateGanntItems();
   }
 
-onIdClick(id: string) {
+onTitleClick(id: string) {
   console.log("start editing " + id);
   const task = this.getTaskById(id);
   if (task) {
