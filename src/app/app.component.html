@@ -104,7 +104,13 @@
 >
   <ngx-gantt-table [draggable]="true" (dragDropped)="onRowDragDropped($event)">
     <ngx-gantt-column name="Title" width="200px">
-      <ng-template #cell let-item="item"> <div (click)="onTitleClick(item.id)"> {{ item.title }} </div></ng-template>
+      <ng-template #cell let-item="item"> 
+        <app-task-title 
+        [item]="item"
+        (clicked)="onTitleClick(item.id)"
+        (deleted)="onTaskDelete(item.id)"
+      ></app-task-title>
+      </ng-template>
     </ngx-gantt-column>
   </ngx-gantt-table>
 </ngx-gantt>
