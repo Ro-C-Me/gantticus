@@ -5,6 +5,7 @@ import { GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttLinkLineType, NgxGanttModule
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule,  ReactiveFormsModule  } from '@angular/forms';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
+import { TaskTitleComponent } from "./task-title/task-title.component";
 
 @NgModule({
   declarations: [
@@ -15,8 +16,9 @@ import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.compon
     NgxGanttModule,
     NgbModule,
     FormsModule,
-    ReactiveFormsModule
-  ],
+    ReactiveFormsModule,
+    TaskTitleComponent
+],
   providers : [
     {
       provide: GANTT_GLOBAL_CONFIG,

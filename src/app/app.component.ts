@@ -17,6 +17,7 @@ import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog
   standalone: false
 })
 export class AppComponent {
+
 onNewChart() {
   this.initWithNewChart();
 }
@@ -63,6 +64,8 @@ availableCharts: {
 
   viewType : GanttViewType = GanttViewType.day;
 
+  showDeleteIcon : boolean = false;
+  
   constructor(private modalService: NgbModal, private chartStorage: ChartStorageService) {
     this.initWithNewChart();
 
@@ -157,6 +160,62 @@ onTitleClick(id: string) {
     console.error("No known element with id " + id + " to edit");
   }
 }
+
+
+
+  onTaskDelete(id: string) {
+    this.deleteItem(id);
+    this.updateGanntItems();
+
+
+  }
+
+  private deleteItem(id: string) {
+
+    // TODO improvement idea: find BaseItem, have a function which decides between groups and tasks by BaseItem instead of searching for tasks first.
+
+    console.log("delete item with id: " + id);
+    const task = this.getTaskById(id);
+    if (task) {
+      console.log("delete a task");
+      const idx = this.chart.tasks.indexOf(task);
+      this.chart.tasks.splice(idx, 1);
+
+      // delete reference in other tasks (dependsOn)
+      this.chart.tasks.forEach(t => {
+        t.dependsOn = t.dependsOn.filter(d => d !== id);
+      });
+
+
+          // delete reference in groups
+    this.chart.groups.forEach(g => {
+      g.children.forEach(c => {
+        g.children = g.children.filter(child => child.id !== id);
+      });
+    });
+    // delete reference in top level
+    this.chart.topLevelItems = this.chart.topLevelItems.filter(i => i.id !== id);
+    } else if (this.getGroupById(id)) {
+      console.log("delete a group");
+      const groupToDelete = this.getGroupById(id)!;
+      const idx = this.chart.groups.indexOf(groupToDelete);
+      this.chart.groups.splice(idx, 1);
+      groupToDelete.children.forEach(i => this.deleteItem(i.id));
+
+      // delete reference in groups
+      this.chart.groups.forEach(g => {
+        g.children.forEach(c => {
+          g.children = g.children.filter(child => child.id !== id);
+        });
+      });
+      // delete reference in top level
+      this.chart.topLevelItems = this.chart.topLevelItems.filter(i => i.id !== id);
+
+    }
+    else {
+      console.error("No known element with id " + id + " to edit");
+    }
+  }
 
   private startTaskEditDialog(taskToEdit: Task) {
     const modalRef = this.modalService.open(TaskEditModalComponent, { centered: true });
