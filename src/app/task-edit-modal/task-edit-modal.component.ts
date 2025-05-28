@@ -32,7 +32,23 @@ export class TaskEditModalComponent implements OnInit {
       title: [this.task.title, Validators.required],
       start: [this.toNgbDate(this.task.start), Validators.required],
       end: [this.toNgbDate(this.task.end), Validators.required],
-      milestone: [this.task.milestone]
+      milestone: [this.task.milestone],
+      useColor: [this.task.color],
+      color: [{ value: this.task.color || '#6698FF', disabled: !this.task.color }]
+    });
+
+
+    this.taskForm.get('useColor')?.valueChanges.subscribe(useColor => {
+      const colorControl = this.taskForm.get('color');
+      if (useColor) {
+        colorControl?.enable();
+        // Optional: Standardfarbe setzen, falls leer
+        if (!colorControl?.value) colorControl?.setValue('#6698FF');
+      } else {
+        colorControl?.disable();
+        // Optional: Wert zurücksetzen, falls gewünscht
+        // colorControl?.setValue(null);
+      }
     });
 
     this.selectedDependencies = this.task.dependsOn;
@@ -96,6 +112,12 @@ export class TaskEditModalComponent implements OnInit {
     this.task.start = this.fromNgbDate(this.taskForm.value.start)!;
     this.task.end = this.fromNgbDate(this.taskForm.value.end)!;
     this.task.milestone = this.taskForm.value.milestone;
+    if (this.taskForm.value.useColor) {
+      this.task.color = this.taskForm.value.color;
+    }
+    else {
+      this.task.color = undefined;
+    }
 
     console.log("task now depends on");
     console.log(this.selectedDependencies);

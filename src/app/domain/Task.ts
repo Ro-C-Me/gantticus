@@ -20,6 +20,9 @@ export class Task {
     title: string = '';
 
     @jsonMember
+    color?: string;
+
+    @jsonMember
     computedStart : Date = new Date();
 
     @jsonMember
@@ -59,6 +62,9 @@ export class Task {
 
     @jsonMember
     title: string = '';
+
+    @jsonMember
+    color?: string;
 
     @jsonArrayMember(BaseItem)
     children : BaseItem [] = [];
