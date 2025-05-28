@@ -16,16 +16,29 @@ export class GroupEditModalComponent {
   groupForm!: FormGroup;
 
   constructor(public activeModal: NgbActiveModal, private fb: FormBuilder) {
-    this.groupForm = this.fb.group({
-      title: ['', Validators.required],
-    });
+
   }
 
   ngOnInit() {
-    console.log("This is INIT!!!");
     this.groupForm = this.fb.group({
       title: [this.group.title, Validators.required],
+      useColor: [this.group.color],
+      color: [{ value: this.group.color || '#6698FF', disabled: !this.group.color }]
     });
+
+    this.groupForm.get('useColor')?.valueChanges.subscribe(useColor => {
+      const colorControl = this.groupForm.get('color');
+      if (useColor) {
+        colorControl?.enable();
+        // Optional: Standardfarbe setzen, falls leer
+        if (!colorControl?.value) colorControl?.setValue('#6698FF');
+      } else {
+        colorControl?.disable();
+        // Optional: Wert zurücksetzen, falls gewünscht
+        // colorControl?.setValue(null);
+      }
+    });
+
   }
   onCancel() {
     this.activeModal.dismiss();
@@ -39,6 +52,12 @@ export class GroupEditModalComponent {
 
     // Änderungen übernehmen
     this.group.title = this.groupForm.value.title;
+    if (this.groupForm.value.useColor) {
+      this.group.color = this.groupForm.value.color;
+    }
+    else {
+      this.group.color = undefined;
+    }
     this.activeModal.close(this.group);
   }
 }

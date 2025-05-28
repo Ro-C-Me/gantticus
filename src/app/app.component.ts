@@ -408,20 +408,7 @@ onTitleClick(id: string) {
     let items :  GanttItem[] = [];
     let itemMap = new Map<string, GanttItem>();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-    const updateGanntItems = (tasks: BaseItem[], items: GanttItem[]) => {
+    const updateGanntItems = (tasks: BaseItem[], items: GanttItem[],  parentColor : string) => {
       console.log("task length:" + tasks.length);
       console.log(tasks);
 
@@ -446,6 +433,13 @@ onTitleClick(id: string) {
               };
               item.color = 'red';
             }
+
+            if (task.color) {
+              item.color = task.color;
+            }
+            else {
+              item.color = parentColor;
+            }
   
             itemMap.set(task.id, item);
             items.push(item);
@@ -466,7 +460,7 @@ onTitleClick(id: string) {
           if (item.children === undefined) {
             item.children = [];
           }
-          updateGanntItems(group.children, item.children);
+          updateGanntItems(group.children, item.children, group.color? group.color : parentColor);
         }
       }
     });
@@ -480,7 +474,7 @@ onTitleClick(id: string) {
       console.log(items);
     }
 
-    updateGanntItems(tasks, items);
+    updateGanntItems(tasks, items, '#6698FF');
     this.items = items;
 
     this.chart.tasks.forEach(t => {

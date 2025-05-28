@@ -12,9 +12,17 @@
           Titel ist erforderlich.
         </div>
       </div>
+
+      <div class="mb-3 d-flex align-items-center">
+        <div class="form-check me-3">
+          <input type="checkbox" id="useColor" class="form-check-input" formControlName="useColor">
+          <label class="form-check-label" for="useColor">Use color</label>
+        </div>
+        <input id="color" type="color" class="form-control" formControlName="color" style="width: 60px;">
+      </div>
     </form>
   </div>
-  
+
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" (click)="onCancel()">Abbrechen</button>
     <button type="button" class="btn btn-primary" (click)="onOk()">OK</button>
