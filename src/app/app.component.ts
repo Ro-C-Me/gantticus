@@ -337,16 +337,17 @@ onGroupTitleClick(id: string) {
 
 
 
-  onAddTask() {
+  onAddTask(group? : string) {
     let id = this.createId();
     let newTask: Task = new Task();
+    newTask.group = group;
     newTask.id = id;
     newTask.title = '';
     newTask.start = new Date("2025-05-01");
     newTask.end = new Date("2025-05-15");
-    this.chart.tasks.push(newTask);
     newTask.computedStart = newTask.start ? newTask.start : new Date();
     newTask.computedEnd = newTask.end ? newTask.end : new Date();
+    this.chart.tasks.push(newTask);
     this.updateGanntItems();
     this.startTaskEditDialog(newTask);
 
