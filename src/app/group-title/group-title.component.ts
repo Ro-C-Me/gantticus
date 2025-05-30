@@ -17,16 +17,18 @@ export class GroupTitleComponent {
 
   showIcons = false;
 
-  onTitleClick() {
+  onTitleClick(event: MouseEvent) {
+    event.stopPropagation();
     this.clicked.emit(this.item);
   }
 
-  onDeleteClick() {
+  onDeleteClick(event: MouseEvent) {
+    event.stopPropagation();
     this.deleted.emit(this.item);
   }
 
-  onAddClick() {
-    console.log("on Add Click (group title)");
+  onAddClick(event: MouseEvent) {
+    event.stopPropagation();
     this.taskAdded.emit(this.item);
   }
 }
