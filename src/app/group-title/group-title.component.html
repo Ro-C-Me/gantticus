@@ -1,5 +1,5 @@
 <span (mouseenter)="showIcons = true" (mouseleave)="showIcons = false">
-    <span (click)="onTitleClick()">{{ item.title }}</span>
-    <i *ngIf="showIcons" class="bi bi-trash text-danger" style="margin-left: 0.5rem;" (click)="onDeleteClick()"></i>
-    <i *ngIf="showIcons" class="bi bi-plus text-primary" style="margin-left: 0.5rem;" (click)="onAddClick()"></i>
+    <span (click)="onTitleClick($event)">{{ item.title }}</span>
+    <i *ngIf="showIcons" class="bi bi-trash text-danger" style="margin-left: 0.5rem;" (click)="onDeleteClick($event)"></i>
+    <i *ngIf="showIcons" class="bi bi-plus text-primary" style="margin-left: 0.5rem;" (click)="onAddClick($event)"></i>
   </span>
