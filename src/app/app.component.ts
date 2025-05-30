@@ -162,27 +162,36 @@ onGroupTitleClick(id: string) {
 }
 
   onTaskDelete(id: string) {
-    this.deleteItem(id);
+    this.deleteTaskById(id);
     this.updateGanntItems();
-
-
   }
 
-  private deleteItem(id: string) {
-
-    console.log("delete item with id: " + id);
+  private deleteTaskById(id: string) {
+    console.log("delete task with id: " + id);
     const task = this.getTaskById(id);
     if (task) {
-      console.log("delete a task");
-      const idx = this.chart.tasks.indexOf(task);
-      this.chart.tasks.splice(idx, 1);
-
-      // delete reference in other tasks (dependsOn)
-      this.chart.tasks.forEach(t => {
-        t.dependsOn = t.dependsOn.filter(d => d !== id);
-      });
+      this.deleteTask(task);
     }
-      // TODO how to delete groups?!
+  }
+
+  private deleteTask(task: Task) {
+    console.log("delete a task");
+    const idx = this.chart.tasks.indexOf(task);
+    this.chart.tasks.splice(idx, 1);
+
+    // delete reference in other tasks (dependsOn)
+    this.chart.tasks.forEach(t => {
+      t.dependsOn = t.dependsOn.filter(d => d !== task.id);
+    });
+  }
+
+  onGroupDelete(id: string) {
+    let toDelete = this.chart.tasks.filter(t => t.group == id);
+    toDelete.forEach(t => {
+      this.deleteTask(t);
+    });
+    this.chart.groups = this.chart.groups.filter(g => g.id != id);
+    this.updateGanntItems();
   }
 
   private startTaskEditDialog(taskToEdit: Task) {
@@ -407,10 +416,10 @@ onGroupTitleClick(id: string) {
       this.groups.push(item);
     });
 
-    if (requiresDefaultGroup) {
+    if (this.groups.length>0 && this.items.filter(i => !i.group_id)) {
       this.groups.push({id : Group.DEFAULT_GROUP_ID, title: ''});
     }
-    // TODO Default Gruppe für Tasks ohne Gruppe?!
+    
     console.log("this.groups: ");
     console.log(this.groups);
   }

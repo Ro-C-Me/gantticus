@@ -115,9 +115,11 @@
   </ngx-gantt-table>
         <!-- group template -->
         <ng-template #group let-group="group" let-items="items">
-          <span class="text-primary" (click)="onGroupTitleClick(group.id)">{{ group.title }} 🚀 
-            
-          </span>
+          <app-group-title 
+        [item]="group"
+        (clicked)="onGroupTitleClick(group.id)"
+        (deleted)="onGroupDelete(group.id)"
+      ></app-group-title>
         </ng-template>
 </ngx-gantt>
 </div>
