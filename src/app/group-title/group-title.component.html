@@ -1,0 +1,4 @@
+<div (mouseenter)="showDeleteIcon = true" (mouseleave)="showDeleteIcon = false">
+    <span (click)="onTitleClick()">{{ item.title }}</span>
+    <i *ngIf="showDeleteIcon" class="bi bi-trash text-danger" style="margin-left: 0.5rem;" (click)="onDeleteClick()"></i>
+  </div>

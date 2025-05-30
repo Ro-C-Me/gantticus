@@ -6,6 +6,7 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule,  ReactiveFormsModule  } from '@angular/forms';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
 import { TaskTitleComponent } from "./task-title/task-title.component";
+import { GroupTitleComponent } from './group-title/group-title.component';
 
 @NgModule({
   declarations: [
@@ -17,7 +18,8 @@ import { TaskTitleComponent } from "./task-title/task-title.component";
     NgbModule,
     FormsModule,
     ReactiveFormsModule,
-    TaskTitleComponent
+    TaskTitleComponent,
+    GroupTitleComponent
 ],
   providers : [
     {
