@@ -186,11 +186,21 @@ onGroupTitleClick(id: string) {
   }
 
   onGroupDelete(id: string) {
-    let toDelete = this.chart.tasks.filter(t => t.group == id);
+    const group = this.getGroupById(id);
+    if (!group) {
+      console.log("no group to delete with id " + id);
+    }
+    else {
+      this.deleteGroup(group!);
+    }
+  }
+
+  private deleteGroup(group: Group) {
+    let toDelete = this.chart.tasks.filter(t => t.group == group.id);
     toDelete.forEach(t => {
       this.deleteTask(t);
     });
-    this.chart.groups = this.chart.groups.filter(g => g.id != id);
+    this.chart.groups = this.chart.groups.filter(g => g.id != group.id);
     this.updateGanntItems();
   }
 
@@ -208,6 +218,12 @@ onGroupTitleClick(id: string) {
         this.updateGanntItems();
       },
       (reason) => {
+
+        if (!taskToEdit.title || taskToEdit.title == '') {
+          console.log("will delete created task again because user clicked cancel");
+          this.deleteTask(taskToEdit);
+        }
+        this.updateGanntItems();
       }
     );
   }
@@ -248,6 +264,12 @@ onGroupTitleClick(id: string) {
         this.updateGanntItems();
       },
       (reason) => {
+
+        if (!toEdit.title || toEdit.title == '') {
+          console.log("will delete created group again because user clicked cancel");
+          this.deleteGroup(toEdit);
+        }
+        this.updateGanntItems();
       }
     );
   }
