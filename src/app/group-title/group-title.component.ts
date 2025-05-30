@@ -13,8 +13,9 @@ export class GroupTitleComponent {
   @Input() item!: GanttGroup;
   @Output() clicked = new EventEmitter<GanttGroup>();
   @Output() deleted = new EventEmitter<GanttGroup>();
+  @Output() taskAdded = new EventEmitter<GanttGroup>();
 
-  showDeleteIcon = false;
+  showIcons = false;
 
   onTitleClick() {
     this.clicked.emit(this.item);
@@ -22,6 +23,10 @@ export class GroupTitleComponent {
 
   onDeleteClick() {
     this.deleted.emit(this.item);
-  
+  }
+
+  onAddClick() {
+    console.log("on Add Click (group title)");
+    this.taskAdded.emit(this.item);
   }
 }

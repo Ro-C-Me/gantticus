@@ -119,6 +119,7 @@
         [item]="group"
         (clicked)="onGroupTitleClick(group.id)"
         (deleted)="onGroupDelete(group.id)"
+        (taskAdded)="onAddTask(group.id)"
       ></app-group-title>
         </ng-template>
 </ngx-gantt>
