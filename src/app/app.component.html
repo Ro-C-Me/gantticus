@@ -100,7 +100,7 @@
   </div>
 </div>
 
-<ngx-gantt #gantt [items]="items" [viewType]="viewType" [draggable]="true" (dragEnded)="dragEnded($event)"
+<ngx-gantt #gantt [groups]="groups" [items]="items" [viewType]="viewType" [draggable]="true" (dragEnded)="dragEnded($event)"
 >
   <ngx-gantt-table [draggable]="true" (dragDropped)="onRowDragDropped($event)">
     <ngx-gantt-column name="Title" width="200px">
@@ -113,5 +113,11 @@
       </ng-template>
     </ngx-gantt-column>
   </ngx-gantt-table>
+        <!-- group template -->
+        <ng-template #group let-group="group" let-items="items">
+          <span class="text-primary" (click)="onGroupTitleClick(group.id)">{{ group.title }} 🚀 
+            
+          </span>
+        </ng-template>
 </ngx-gantt>
 </div>

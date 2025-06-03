@@ -1,4 +1,4 @@
-import { BaseItem, Group, Task } from "./Task";
+import { Group, Task } from "./Task";
 import { jsonObject, jsonArrayMember, jsonMember } from 'typedjson';
 
 
@@ -16,8 +16,5 @@ export class Chart {
 
     @jsonArrayMember(Group)
     groups : Group[] = [];
-  
-    @jsonArrayMember(BaseItem)
-    topLevelItems : BaseItem[] = [];
 
 }
