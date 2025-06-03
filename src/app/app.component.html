@@ -25,7 +25,20 @@
   
 
   <header class="d-flex align-items-center p-3 mb-3 bg-light border-bottom">
-    <!-- Platzhalter links (für evtl. weitere Buttons) -->
+    <div class="d-flex align-items-left">
+      <div ngbDropdown class="btn-group">
+        <button class="btn btn-primary" (click)="onAddTask()">
+          <i class="bi bi-plus-lg"></i> Neuer Task
+        </button>
+        <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" ngbDropdownToggle>
+          <span class="visually-hidden">Dropdown öffnen</span>
+        </button>
+        <div ngbDropdownMenu>
+          <button class="dropdown-item" (click)="onAddTask()">Task hinzufügen</button>
+          <button class="dropdown-item" (click)="onAddGroup()">Gruppe hinzufügen</button>
+        </div>
+      </div>
+    </div>
     <div class="flex-grow-1"></div>
     <!-- Name des Charts, mittig und anklickbar -->
     <div class="d-flex align-items-center">
@@ -72,35 +85,10 @@
       </button>
     </div>
   </header>
-  
 
-
-
-<div class="d-flex justify-content-between align-items-center p-2 mb-3 bg-light border rounded">
-  <div class="container-fluid">
-    <div ngbDropdown class="btn-group">
-      <button class="btn btn-primary" (click)="onAddTask()">
-        <i class="bi bi-plus-lg"></i> Neuer Task
-      </button>
-      <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" ngbDropdownToggle>
-        <span class="visually-hidden">Dropdown öffnen</span>
-      </button>
-      <div ngbDropdownMenu>
-        <button class="dropdown-item" (click)="onAddTask()">Task hinzufügen</button>
-        <button class="dropdown-item" (click)="onAddGroup()">Gruppe hinzufügen</button>
-      </div>
-    </div>
-  </div>
-  <div class="ms-auto">
-    <select class="form-select w-auto" [(ngModel)]="viewType" name="viewType">
-      <option *ngFor="let option of viewTypeOptions" [ngValue]="option.value">
-        {{ option.label }}
-      </option>
-    </select>
-  </div>
-</div>
-
-<ngx-gantt #gantt [groups]="groups" [items]="items" [viewType]="viewType" [draggable]="true" (dragEnded)="dragEnded($event)"
+<ngx-gantt #gantt [groups]="groups" [items]="items" [viewType]="viewType" [draggable]="true" (dragEnded)="dragEnded($event)" 
+[showToolbar]="true"
+[toolbarOptions]="toolbarOptions"
 >
   <ngx-gantt-table [draggable]="true" (dragDropped)="onRowDragDropped($event)">
     <ngx-gantt-column name="Title" width="200px">
