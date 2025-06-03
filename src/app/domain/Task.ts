@@ -9,6 +9,9 @@ export class Task {
     title: string = '';
 
     @jsonMember
+    ticketUrl: string = '';
+
+    @jsonMember
     color?: string;
 
     @jsonMember

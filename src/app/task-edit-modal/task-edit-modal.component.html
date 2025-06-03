@@ -13,6 +13,14 @@
         </div>
       </div>
   
+      <div class="mb-3">
+        <label for="ticketUrl" class="form-label">Ticket URL</label>
+        <input id="ticketUrl" type="url" class="form-control" formControlName="ticketUrl" />
+        <div *ngIf="taskForm.get('ticketUrl')?.invalid && taskForm.get('ticketUrl')?.touched" class="text-danger">
+          invalid URL
+        </div>
+      </div>
+
       <div class="row mb-3">
         <div class="col">
           <label for="start" class="form-label">von</label>
