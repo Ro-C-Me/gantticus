@@ -57,7 +57,7 @@ availableCharts: {
 
 @ViewChild('nameInput') nameInput!: ElementRef<HTMLInputElement>;
 
-  title = 'Gannticus';
+  title = 'Gantticus';
 
   chart : Chart = new Chart();
 
@@ -134,7 +134,7 @@ availableCharts: {
     task3.dependsOn.push(task1.id);
     task4.dependsOn.push(task1.id);
 
-    this.updateGanntItems();
+    this.updateGanttItems();
 
   }
   
@@ -142,7 +142,7 @@ availableCharts: {
     this.chart = new Chart();
     this.chart.id = this.createId();
     this.chart.name = 'New Gantt chart';
-    this.updateGanntItems();
+    this.updateGanttItems();
   }
 
 onTitleClick(id: string) {
@@ -166,7 +166,7 @@ onGroupTitleClick(id: string) {
 
   onTaskDelete(id: string) {
     this.deleteTaskById(id);
-    this.updateGanntItems();
+    this.updateGanttItems();
   }
 
   private deleteTaskById(id: string) {
@@ -204,7 +204,7 @@ onGroupTitleClick(id: string) {
       this.deleteTask(t);
     });
     this.chart.groups = this.chart.groups.filter(g => g.id != group.id);
-    this.updateGanntItems();
+    this.updateGanttItems();
   }
 
   private startTaskEditDialog(taskToEdit: Task) {
@@ -217,7 +217,7 @@ onGroupTitleClick(id: string) {
         this.replaceTaskById(result);
         
         this.recomputeTasks(result);
-        this.updateGanntItems();
+        this.updateGanttItems();
       },
       (reason) => {
 
@@ -225,7 +225,7 @@ onGroupTitleClick(id: string) {
           console.log("will delete created task again because user clicked cancel");
           this.deleteTask(taskToEdit);
         }
-        this.updateGanntItems();
+        this.updateGanttItems();
       }
     );
   }
@@ -263,7 +263,7 @@ onGroupTitleClick(id: string) {
         this.replaceGroupById(result);
         
         this.recomputeTasks(result);
-        this.updateGanntItems();
+        this.updateGanttItems();
       },
       (reason) => {
 
@@ -271,7 +271,7 @@ onGroupTitleClick(id: string) {
           console.log("will delete created group again because user clicked cancel");
           this.deleteGroup(toEdit);
         }
-        this.updateGanntItems();
+        this.updateGanttItems();
       }
     );
   }
@@ -356,7 +356,7 @@ onGroupTitleClick(id: string) {
           this.chart.tasks.splice(targetIndex, 0, taskToMove);
         }
 
-        this.updateGanntItems();
+        this.updateGanttItems();
       }
 
 
@@ -372,7 +372,7 @@ onGroupTitleClick(id: string) {
     newTask.computedStart = newTask.start ? newTask.start : new Date();
     newTask.computedEnd = newTask.end ? newTask.end : new Date();
     this.chart.tasks.push(newTask);
-    this.updateGanntItems();
+    this.updateGanttItems();
     this.startTaskEditDialog(newTask);
 
   }
@@ -387,11 +387,11 @@ onGroupTitleClick(id: string) {
     newGroup.id = id;
     newGroup.title = '';
     this.chart.groups.push(newGroup);
-    this.updateGanntItems();
+    this.updateGanttItems();
     this.startGroupEditDialog(newGroup);
   }
 
-  updateGanntItems() {
+  updateGanttItems() {
     let itemById = new Map<string, GanttItem>();
     let requiresDefaultGroup = false;
 
@@ -456,7 +456,7 @@ onGroupTitleClick(id: string) {
     }
     else {
       this.chart =  loadedChart;
-      this.updateGanntItems();
+      this.updateGanttItems();
     }
   }
   onSave() {
