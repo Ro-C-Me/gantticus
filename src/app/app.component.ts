@@ -127,6 +127,7 @@ availableCharts: {
     task4.computedStart = task4.start ? task4.start : new Date();
     task4.computedEnd = task4.end ? task4.end : new Date();
     task4.group = group0.id;
+    task4.scheduleFinalized = true;
     
 
     task0.dependsOn.push(task1.id);
@@ -414,6 +415,7 @@ onGroupTitleClick(id: string) {
         requiresDefaultGroup = true;
         item.group_id = Group.DEFAULT_GROUP_ID;
       }
+      item.draggable = !t.scheduleFinalized;
       this.items.push(item);
       itemById.set(t.id, item);
     });

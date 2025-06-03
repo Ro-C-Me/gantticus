@@ -34,6 +34,7 @@ export class TaskEditModalComponent implements OnInit {
       start: [this.toNgbDate(this.task.start), Validators.required],
       end: [this.toNgbDate(this.task.end), Validators.required],
       milestone: [this.task.milestone],
+      scheduleFinalized: [this.task.scheduleFinalized],
       useColor: [this.task.color],
       color: [{ value: this.task.color || '#6698FF', disabled: !this.task.color }]
     });
@@ -114,6 +115,7 @@ export class TaskEditModalComponent implements OnInit {
     this.task.start = this.fromNgbDate(this.taskForm.value.start)!;
     this.task.end = this.fromNgbDate(this.taskForm.value.end)!;
     this.task.milestone = this.taskForm.value.milestone;
+    this.task.scheduleFinalized = this.taskForm.value.scheduleFinalized;
     if (this.taskForm.value.useColor) {
       this.task.color = this.taskForm.value.color;
     }
