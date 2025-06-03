@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
-import { NgxGanttModule, GanttItem, GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttItemType, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup } from '@worktile/gantt';
+import { NgxGanttModule, GanttItem, GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttItemType, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions } from '@worktile/gantt';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Group, Task } from './domain/Task';
@@ -17,6 +17,16 @@ import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog
   standalone: false
 })
 export class AppComponent {
+
+  toolbarOptions: GanttToolbarOptions = {
+    viewTypes: [
+        GanttViewType.day,
+        GanttViewType.week,
+        GanttViewType.month,
+        GanttViewType.quarter,
+        GanttViewType.year
+    ]
+};
 
 onNewChart() {
   this.initWithNewChart();
@@ -55,13 +65,6 @@ availableCharts: {
 
   items: GanttItem[] = [];
   groups: GanttGroup[] = [];
-
-  viewTypeOptions = [
-    { label: 'Quartal', value: GanttViewType.quarter },
-    { label: 'Monat', value: GanttViewType.month },
-    { label: 'Woche', value: GanttViewType.week },
-    { label: 'Tag', value: GanttViewType.day }
-  ];
 
   viewType : GanttViewType = GanttViewType.day;
 
