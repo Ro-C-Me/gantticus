@@ -120,10 +120,6 @@ export class TaskEditModalComponent implements OnInit {
     else {
       this.task.color = undefined;
     }
-
-    console.log("task now depends on");
-    console.log(this.selectedDependencies);
-    console.log(this.task.dependsOn);
     this.activeModal.close(this.task);
   }
 }

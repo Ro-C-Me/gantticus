@@ -1,6 +1,7 @@
 import type { GanttItem } from '@worktile/gantt';
 import { Component, Input, Output, EventEmitter  } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Task } from '../domain/Task';
 
 @Component({
   selector: 'app-task-title',
@@ -10,12 +11,32 @@ import { CommonModule } from '@angular/common';
   styleUrl: './task-title.component.scss'
 })
 export class TaskTitleComponent {
+  getUrl() {
+    if (this.item.origin instanceof Task) {
+      return this.item.origin.ticketUrl;
+    }
+    else {
+      console.error("origin is no Task!!!");
+      return '';
+    }
+  }
+
+  hasUrl(): boolean {
+
+    if (this.item.origin instanceof Task) {
+      return this.item.origin.ticketUrl.trim() != '';
+    }
+    else {
+      console.error("origin is no Task!!!");
+      return false;
+    }
+  }
 
   @Input() item!: GanttItem;
   @Output() clicked = new EventEmitter<GanttItem>();
   @Output() deleted = new EventEmitter<GanttItem>();
 
-  showDeleteIcon = false;
+  showIcons = false;
 
   onTitleClick() {
     this.clicked.emit(this.item);
