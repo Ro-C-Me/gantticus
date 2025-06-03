@@ -30,6 +30,7 @@ export class TaskEditModalComponent implements OnInit {
   ngOnInit() {
     this.taskForm = this.fb.group({
       title: [this.task.title, Validators.required],
+      ticketUrl: [this.task.ticketUrl],
       start: [this.toNgbDate(this.task.start), Validators.required],
       end: [this.toNgbDate(this.task.end), Validators.required],
       milestone: [this.task.milestone],
@@ -109,6 +110,7 @@ export class TaskEditModalComponent implements OnInit {
     }
     // Änderungen übernehmen
     this.task.title = this.taskForm.value.title;
+    this.task.ticketUrl = this.taskForm.value.ticketUrl;
     this.task.start = this.fromNgbDate(this.taskForm.value.start)!;
     this.task.end = this.fromNgbDate(this.taskForm.value.end)!;
     this.task.milestone = this.taskForm.value.milestone;
