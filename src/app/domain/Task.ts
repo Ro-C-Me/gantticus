@@ -38,7 +38,8 @@ export class Task {
     @jsonMember
     milestone: boolean = false;
 
-    group: string | undefined = undefined;
+    @jsonMember
+    group?: string;
   }
 
   @jsonObject
