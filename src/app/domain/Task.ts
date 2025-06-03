@@ -1,16 +1,5 @@
 import { jsonObject, jsonArrayMember, jsonMember } from 'typedjson';
 @jsonObject
-export class BaseItem {
-  @jsonMember
-  id: string = '';
-
-  @jsonMember({
-    deserializer: (value: any) => value as 'task' | 'group',
-    serializer: (value: 'task' | 'group') => value
-  })
-  type: 'task' | 'group' = 'task';
-}
-@jsonObject
 export class Task {
 
     @jsonMember
@@ -49,14 +38,13 @@ export class Task {
     @jsonMember
     milestone: boolean = false;
 
-    toBaseItem() : BaseItem {
-      return {id : this.id, type : 'task'};
-    }
+    group: string | undefined = undefined;
   }
 
   @jsonObject
     export class Group {
 
+    static readonly DEFAULT_GROUP_ID = "DEFAULT_GROUP_ID";
     @jsonMember
     id: string = '';
 
@@ -66,10 +54,4 @@ export class Task {
     @jsonMember
     color?: string;
 
-    @jsonArrayMember(BaseItem)
-    children : BaseItem [] = [];
-
-    toBaseItem() : BaseItem {
-      return {id : this.id, type : 'group'};
-    }
   }
