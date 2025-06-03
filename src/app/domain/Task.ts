@@ -15,6 +15,9 @@ export class Task {
     color?: string;
 
     @jsonMember
+    scheduleFinalized: boolean = false;
+
+    @jsonMember
     computedStart : Date = new Date();
 
     @jsonMember

@@ -21,6 +21,16 @@
         </div>
       </div>
 
+      <div class="form-check mb-3">
+        <input
+          id="scheduleFinalized"
+          type="checkbox"
+          class="form-check-input"
+          formControlName="scheduleFinalized"
+        />
+        <label for="scheduleFinalized" class="form-check-label">Finalize schedule</label>
+      </div>
+
       <div class="row mb-3">
         <div class="col">
           <label for="start" class="form-label">von</label>
@@ -30,6 +40,7 @@
                  ngbDatepicker
                  #d1="ngbDatepicker"
                  placeholder="yyyy-mm-dd"
+                 [disabled]="taskForm.get('scheduleFinalized')?.value" 
                  (click)="d1.toggle()" />
           <div *ngIf="taskForm.get('start')?.invalid && taskForm.get('start')?.touched" class="text-danger">
             Startdatum ist erforderlich.
@@ -43,6 +54,7 @@
                  ngbDatepicker
                  #d2="ngbDatepicker"
                  placeholder="yyyy-mm-dd"
+                 [disabled]="taskForm.get('scheduleFinalized')?.value" 
                  (click)="d2.toggle()" />
           <div *ngIf="taskForm.get('end')?.invalid && taskForm.get('end')?.touched" class="text-danger">
             Enddatum ist erforderlich.
