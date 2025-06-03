@@ -206,8 +206,7 @@ onGroupTitleClick(id: string) {
 
   private startTaskEditDialog(taskToEdit: Task) {
     const modalRef = this.modalService.open(TaskEditModalComponent, { centered: true });
-    // Kopie übergeben, damit Änderungen erst bei OK übernommen werden
-    modalRef.componentInstance.task = { ...taskToEdit };
+    modalRef.componentInstance.task = taskToEdit;
     modalRef.componentInstance.tasks = this.chart.tasks;
 
     modalRef.result.then(
