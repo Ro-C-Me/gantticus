@@ -439,7 +439,7 @@ onGroupTitleClick(id: string) {
       this.groups.push(item);
     });
 
-    if (this.groups.length>0 && this.items.filter(i => !i.group_id)) {
+    if (this.groups.length>0 && this.items.filter(i => i.group_id == Group.DEFAULT_GROUP_ID).length > 0) {
       this.groups.push({id : Group.DEFAULT_GROUP_ID, title: ''});
     }
     
