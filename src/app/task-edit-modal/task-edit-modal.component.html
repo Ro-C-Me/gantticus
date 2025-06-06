@@ -21,6 +21,25 @@
         </div>
       </div>
 
+      
+      <div class="mb-3 d-flex align-items-center">
+        <div class="form-check me-3">
+          <input type="checkbox" id="useColor" class="form-check-input" formControlName="useColor">
+          <label class="form-check-label" for="useColor">Use color</label>
+        </div>
+        <input id="color" type="color" class="form-control" formControlName="color" style="width: 60px;">
+      </div>
+
+      <div class="form-check mb-3">
+        <input
+          id="milestone"
+          type="checkbox"
+          class="form-check-input"
+          formControlName="milestone"
+        />
+        <label for="milestone" class="form-check-label">Meilenstein</label>
+      </div>
+
       <div class="form-check mb-3">
         <input
           id="scheduleFinalized"
@@ -31,6 +50,7 @@
         <label for="scheduleFinalized" class="form-check-label">Finalize schedule</label>
       </div>
 
+      <h6>Zeitplanung</h6>
       <div class="row mb-3">
         <div class="col">
           <label for="start" class="form-label">von</label>
@@ -62,49 +82,10 @@
         </div>
       </div>
       
-      <div class="mb-3 d-flex align-items-center">
-        <div class="form-check me-3">
-          <input type="checkbox" id="useColor" class="form-check-input" formControlName="useColor">
-          <label class="form-check-label" for="useColor">Use color</label>
-        </div>
-        <input id="color" type="color" class="form-control" formControlName="color" style="width: 60px;">
-      </div>
-
-
-      <div class="form-check mb-3">
-        <input
-          id="milestone"
-          type="checkbox"
-          class="form-check-input"
-          formControlName="milestone"
-        />
-        <label for="milestone" class="form-check-label">Meilenstein</label>
-      </div>
-
-
-
-      <div class="form-check mb-3">
-        <label for="taskDependencies">Abhängigkeiten auswählen</label>
-        <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
-          <div *ngFor="let task of tasks">
-            <div class="form-check">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                [id]="'dep-' + task.id"
-                [value]="task.id"
-                (change)="onDependencyToggle(task.id, $event)"
-                [checked]="selectedDependencies.includes(task.id)"
-              />
-              <label class="form-check-label" [for]="'dep-' + task.id">
-                {{ task.title }}
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-
+      <app-dependency-management
+      [currentTask]="task"
+      [tasks]="tasks"
+      [(dependencies)]="dependencies"></app-dependency-management>
 
 
 

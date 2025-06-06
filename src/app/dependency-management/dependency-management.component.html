@@ -1,0 +1,57 @@
+<div class="mb-3">
+    <h6 class="form-label">Abhängigkeiten</h6>
+    <div class="card border-light shadow-sm mb-3">
+      <div class="card-body p-3">
+        <div class="row g-3 align-items-center mb-2">
+          <div class="col-auto">
+            <label for="taskSelect" class="form-label visually-hidden">Vorgänger-Task</label>
+            <select id="taskSelect" class="form-select" [(ngModel)]="selectedTaskId" name="taskSelect" required>
+              @for (task of selectableTasks; track task.id) {
+                <option [value]="task.id">{{ task.title }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-auto">
+            <label for="typeSelect" class="form-label visually-hidden">Abhängigkeitstyp</label>
+            <select id="typeSelect" class="form-select" [(ngModel)]="selectedType" name="typeSelect" required>
+              @for (dt of dependencyTypes; track dt.key) {
+                <option [value]="dt.key" [attr.title]="dt.tooltip">{{ dt.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-primary btn-sm" (click)="addDependency()" [disabled]="!selectedTaskId">
+              Hinzufügen
+            </button>
+          </div>
+        </div>
+  
+        @if (dependencies.length === 0) {
+          <div class="text-muted small">
+            Keine Abhängigkeiten definiert.
+          </div>
+        }
+        @else {
+          <div class="d-flex flex-wrap gap-2">
+            @for (group of dependenciesGroupedByType; track group.type) {
+              <div class="flex-grow-1" style="min-width: 180px;">
+                <label class="form-label small fw-bold mb-1">{{ getLabelByGroupType(group.type) }}</label>
+                <ul class="list-group">
+                  @for (dep of group.items; track dep.taskId + dep.type) {
+                    <li class="list-group-item p-1 d-flex justify-content-between align-items-center small">
+                      {{ getTaskTitleById(dep.taskId) }}
+                      <button type="button" class="btn btn-sm btn-outline-danger" aria-label="Löschen"
+                        (click)="removeDependency(dep)">
+                        &times;
+                      </button>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+  

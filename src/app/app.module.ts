@@ -7,6 +7,7 @@ import { FormsModule,  ReactiveFormsModule  } from '@angular/forms';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
 import { TaskTitleComponent } from "./task-title/task-title.component";
 import { GroupTitleComponent } from './group-title/group-title.component';
+import { DependencyManagementComponent } from './dependency-management/dependency-management.component';
 
 @NgModule({
   declarations: [
@@ -19,7 +20,8 @@ import { GroupTitleComponent } from './group-title/group-title.component';
     FormsModule,
     ReactiveFormsModule,
     TaskTitleComponent,
-    GroupTitleComponent
+    GroupTitleComponent,
+    DependencyManagementComponent
 ],
   providers : [
     {
@@ -28,7 +30,7 @@ import { GroupTitleComponent } from './group-title/group-title.component';
         locale: GanttI18nLocale.enUs,
         linkOptions: {
           showArrow: true,
-          lineType: GanttLinkLineType.straight
+          lineType: GanttLinkLineType.curve
         }
       },
     }

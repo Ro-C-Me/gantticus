@@ -1,8 +1,6 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
-import { NgxGanttModule, GanttItem, GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttItemType, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions } from '@worktile/gantt';
-import { RouterOutlet } from '@angular/router';
-import { CommonModule } from '@angular/common';
-import { Group, Task } from './domain/Task';
+import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType } from '@worktile/gantt';
+import { Dependency, DependencyType, Group, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
 import { GroupEditModalComponent } from './group-edit-modal/group-edit-modal.component';
@@ -130,10 +128,14 @@ availableCharts: {
     task4.scheduleFinalized = true;
     
 
-    task0.dependsOn.push(task1.id);
-    task2.dependsOn.push(task1.id);
-    task3.dependsOn.push(task1.id);
-    task4.dependsOn.push(task1.id);
+    const dependency = new Dependency();
+    dependency.type = DependencyType.FS;
+    dependency.taskId = task1.id;
+
+    task0.dependencies = [dependency];
+    task2.dependencies = [dependency];
+    task3.dependencies = [dependency];
+    task4.dependencies = [dependency];
 
     this.updateGanttItems();
 
@@ -185,7 +187,7 @@ onGroupTitleClick(id: string) {
 
     // delete reference in other tasks (dependsOn)
     this.chart.tasks.forEach(t => {
-      t.dependsOn = t.dependsOn.filter(d => d !== task.id);
+      t.dependencies = t.dependencies.filter(d => d.taskId !== task.id);
     });
   }
 
@@ -421,15 +423,15 @@ onGroupTitleClick(id: string) {
     });
 
     this.chart.tasks.forEach(t => {
-     t.dependsOn.forEach(d => {
-        if (!itemById.get(d)) {
-          console.warn(t.id + " seem to depend on unknown task " + d);
+     t.dependencies.forEach(d => {
+        if (!itemById.get(d.taskId)) {
+          console.warn(t.id + " seem to depend on unknown task " + d.taskId);
         }
         else {
-          if (!itemById.get(d)!.links) {
-            itemById.get(d)!.links = [];
+          if (!itemById.get(d.taskId)!.links) {
+            itemById.get(d.taskId)!.links = [];
           }
-          itemById.get(d)!.links?.push(t.id);
+          itemById.get(d.taskId)!.links?.push(createGanttLink(t.id, d.type));
         }
      }) 
     });
@@ -449,6 +451,25 @@ onGroupTitleClick(id: string) {
     
     console.log("this.groups: ");
     console.log(this.groups);
+
+    function createGanttLink(taskId: string, type: DependencyType): import("@worktile/gantt").GanttLink {
+      return { link: taskId, type: mapType(type) };
+
+      function mapType(type: DependencyType): GanttLinkType {
+        switch (type) {
+          case DependencyType.FS:
+            return GanttLinkType.fs;
+          case DependencyType.FF:
+            return GanttLinkType.ff;
+          case DependencyType.SS:
+            return GanttLinkType.ss;
+          case DependencyType.SF:
+            return GanttLinkType.sf;
+          default:
+            throw new Error(`Unbekannter DependencyType: ${type}`);
+        }
+      }
+    }
   }
 
   onOpenChart(chart: { id: string; name: string; }) {
