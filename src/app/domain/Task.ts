@@ -1,4 +1,21 @@
 import { jsonObject, jsonArrayMember, jsonMember } from 'typedjson';
+
+export enum DependencyType {
+  FS = 'fs',
+  FF = 'ff',
+  SS = 'ss',
+  SF = 'sf'
+}
+
+@jsonObject
+export class Dependency {
+
+  @jsonMember
+  taskId: string = '';
+
+  @jsonMember
+  type: DependencyType = DependencyType.FS;
+}
 @jsonObject
 export class Task {
 
@@ -23,8 +40,8 @@ export class Task {
     @jsonMember
     computedEnd : Date = new Date();
 
-    @jsonArrayMember(String)
-    dependsOn : string[] = [];
+    @jsonArrayMember(Dependency)
+    dependencies : Dependency[] = [];
 
     @jsonMember
     start?: Date;
@@ -47,6 +64,7 @@ export class Task {
     @jsonMember
     group?: string;
   }
+
 
   @jsonObject
     export class Group {

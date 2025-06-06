@@ -2,7 +2,8 @@ import { Component, Input, OnInit} from '@angular/core';
 import { NgbActiveModal, NgbDateStruct, NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Task } from '../domain/Task';
+import { Dependency, Task } from '../domain/Task';
+import { DependencyManagementComponent } from '../dependency-management/dependency-management.component';
 
 @Component({
   selector: 'app-task-edit-modal',
@@ -12,7 +13,8 @@ import { Task } from '../domain/Task';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    NgbDatepickerModule
+    NgbDatepickerModule,
+    DependencyManagementComponent
   ]
 })
 export class TaskEditModalComponent implements OnInit {
@@ -21,7 +23,7 @@ export class TaskEditModalComponent implements OnInit {
 
   @Input() tasks!: Task[];
   
-  selectedDependencies : string[] = [];
+  dependencies : Dependency[] = [];
 
   taskForm!: FormGroup;
 
@@ -44,16 +46,13 @@ export class TaskEditModalComponent implements OnInit {
       const colorControl = this.taskForm.get('color');
       if (useColor) {
         colorControl?.enable();
-        // Optional: Standardfarbe setzen, falls leer
         if (!colorControl?.value) colorControl?.setValue('#6698FF');
       } else {
         colorControl?.disable();
-        // Optional: Wert zurücksetzen, falls gewünscht
-        // colorControl?.setValue(null);
       }
     });
 
-    this.selectedDependencies = this.task.dependsOn;
+    this.dependencies = [...this.task.dependencies];
   }
 
   // Hilfsfunktion: Date zu NgbDateStruct
@@ -70,23 +69,6 @@ export class TaskEditModalComponent implements OnInit {
   fromNgbDate(ngbDate: NgbDateStruct): Date | null {
     if (!ngbDate) return null;
     return new Date(ngbDate.year, ngbDate.month - 1, ngbDate.day);
-  }
-
-  onDependencyToggle(depencyId: string,$event: Event) {
-    const checked = ($event.target as HTMLInputElement).checked;
-    console.log("dependency to " + depencyId + " changed to " + checked);
-    if (checked) {
-      this.selectedDependencies.push(depencyId);
-    }
-    else {
-      const index = this.selectedDependencies.indexOf(depencyId);
-      if (index > -1) {
-        this.selectedDependencies.splice(index, 1);
-      }
-    }
-
-    console.log(" current dependencies: ");
-    console.log(this.selectedDependencies);
   }
 
   // Validierung: Enddatum nach Startdatum
@@ -116,6 +98,8 @@ export class TaskEditModalComponent implements OnInit {
     this.task.end = this.fromNgbDate(this.taskForm.value.end)!;
     this.task.milestone = this.taskForm.value.milestone;
     this.task.scheduleFinalized = this.taskForm.value.scheduleFinalized;
+    this.task.dependencies = this.dependencies;
+    
     if (this.taskForm.value.useColor) {
       this.task.color = this.taskForm.value.color;
     }
@@ -123,5 +107,8 @@ export class TaskEditModalComponent implements OnInit {
       this.task.color = undefined;
     }
     this.activeModal.close(this.task);
+
+    console.log("Task after edit: ");
+    console.log(this.task);
   }
 }
