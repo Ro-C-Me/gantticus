@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
-import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent } from '@worktile/gantt';
+import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent } from '@worktile/gantt';
 import { Dependency, DependencyType, Group, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
@@ -15,6 +15,13 @@ import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog
   standalone: false
 })
 export class AppComponent {
+onSelect($event: GanttSelectedEvent<unknown>) {
+  const item = $event.selectedValue as GanttItem<unknown>;
+
+  if (item.origin instanceof Task) {
+    this.startTaskEditDialog(item.origin);
+  }
+}
 
 lineClick($event: GanttLineClickEvent<unknown>) {
   if ($event.target.origin instanceof Task) {
@@ -183,18 +190,6 @@ availableCharts: {
     this.chart.name = 'New Gantt chart';
     this.updateGanttItems();
   }
-
-onTitleClick(id: string) {
-  console.log("start editing " + id);
-  const task = this.getTaskById(id);
-  if (task) {
-    console.log("edit a task");
-    this.startTaskEditDialog(task);
-  }
-  else {
-    console.error("No known element with id " + id + " to edit");
-  }
-}
 
 onGroupTitleClick(id: string) {
   if (this.getGroupById(id)) {

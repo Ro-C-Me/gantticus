@@ -1,11 +1,10 @@
 <!-- task-title.component.html -->
 <div (mouseenter)="showIcons = true" (mouseleave)="showIcons = false">
-    <span (click)="onTitleClick()">{{ item.title }}</span>
+    <a *ngIf="hasUrl()" target="_blank" [href]="getUrl()" rel="noopener">
+      {{ item.title }}
+    </a>
+    <span *ngIf="!hasUrl()">{{ item.title }}</span>
     <i *ngIf="showIcons" class="bi bi-trash text-danger" style="margin-left: 0.5rem;" (click)="onDeleteClick()"></i>
-    <a *ngIf="showIcons && hasUrl()"
-    target="_blank" [href]="getUrl()">
-   <i class="bi bi-link" style="margin-left: 0.5rem;"></i>
- </a>
  
   </div>
   
