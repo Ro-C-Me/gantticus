@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
-import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent } from '@worktile/gantt';
+import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent } from '@worktile/gantt';
 import { Dependency, DependencyType, Group, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
@@ -15,6 +15,13 @@ import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog
   standalone: false
 })
 export class AppComponent {
+
+lineClick($event: GanttLineClickEvent<unknown>) {
+  if ($event.target.origin instanceof Task) {
+    $event.target.origin.dependencies = $event.target.origin.dependencies.filter(d => d.taskId != $event.source.id);
+    this.updateGanttItems();
+  } 
+}
 
 onLinkFinished(event: GanttLinkDragEvent<unknown>) {
   if (event.target && event.type) {
