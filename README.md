@@ -1,5 +1,14 @@
 # Gantticus
 
+A small web application for drawing Gantt charts. Explicitly without a backend—the data remains in the browser’s local storage.
+
+This project was created for two reasons:
+
+I was appointed as an internal project manager at short notice and wanted to draw a Gantt chart—but couldn’t find suitable software. Open source programs were too complex or “old-fashioned” for my taste, and there were no licenses available for commercial alternatives. I could have used Excel or drawn bars “freehand” in Confluence—neither of which I found particularly effective.
+
+My days of actively developing software are (unfortunately?) behind me. Still, I wanted to experience what “developing with AI” feels like and was looking for a small project to try it out. That’s how one thing led to another, and I spent a few evenings with Angular and Perplexity. My conclusion: it works quite well, but the manual back-and-forth between IDE and AI becomes rather tedious over time. The next step, therefore: try out GitHub Copilot.
+
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.11.
 
 ## Development server
@@ -11,49 +20,3 @@ ng serve
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
