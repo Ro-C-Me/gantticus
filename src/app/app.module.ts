@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { AppComponent } from './app.component';
-import { GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttLinkLineType, NgxGanttModule } from '@worktile/gantt';
+import { GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttLinkLineType, GanttLinkType, NgxGanttModule } from '@worktile/gantt';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule,  ReactiveFormsModule  } from '@angular/forms';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
@@ -29,6 +29,7 @@ import { DependencyManagementComponent } from './dependency-management/dependenc
       useValue: {
         locale: GanttI18nLocale.enUs,
         linkOptions: {
+          dependencyTypes: [GanttLinkType.ff, GanttLinkType.fs, GanttLinkType.sf, GanttLinkType.ss],
           showArrow: true,
           lineType: GanttLinkLineType.curve
         }
