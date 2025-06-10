@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
-import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType } from '@worktile/gantt';
+import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent } from '@worktile/gantt';
 import { Dependency, DependencyType, Group, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
@@ -15,6 +15,35 @@ import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog
   standalone: false
 })
 export class AppComponent {
+
+onLinkFinished(event: GanttLinkDragEvent<unknown>) {
+  if (event.target && event.type) {
+    const dependency : Dependency  = new Dependency(); 
+    dependency.taskId = event.source.id;
+    dependency.type = mapType(event.type);
+
+    const task : Task | undefined = this.chart.tasks.find(t => t.id == event.target!.id);
+    if (task) {
+      task.dependencies.push(dependency);
+      this.updateGanttItems();
+    }
+  }
+
+  function mapType(type: GanttLinkType): DependencyType {
+    switch (type) {
+      case GanttLinkType.fs:
+        return DependencyType.FS;
+      case GanttLinkType.ff:
+        return DependencyType.FF;
+      case GanttLinkType.ss:
+        return DependencyType.SS;
+      case GanttLinkType.ss:
+        return DependencyType.SF;
+      default:
+        throw new Error(`Unbekannter DependencyType: ${type}`);
+    }
+  }
+}
 
   toolbarOptions: GanttToolbarOptions = {
     viewTypes: [
