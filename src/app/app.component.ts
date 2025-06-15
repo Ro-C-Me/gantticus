@@ -414,7 +414,8 @@ onGroupTitleClick(id: string) {
     newTask.id = id;
     newTask.title = '';
     newTask.start = new Date("2025-05-01");
-    newTask.end = new Date("2025-05-15");
+    newTask.end = new Date("2025-05-01");
+    console.log(newTask.start);
     newTask.computedStart = newTask.start ? newTask.start : new Date();
     newTask.computedEnd = newTask.end ? newTask.end : new Date();
     this.chart.tasks.push(newTask);
