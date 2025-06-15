@@ -8,12 +8,15 @@ import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.compon
 import { TaskTitleComponent } from "./task-title/task-title.component";
 import { GroupTitleComponent } from './group-title/group-title.component';
 import { DependencyManagementComponent } from './dependency-management/dependency-management.component';
+import { routes } from './app.routes';
+import { RouterModule } from '@angular/router';
 
 @NgModule({
   declarations: [
     AppComponent
   ],
   imports: [
+    RouterModule.forRoot(routes),
     BrowserModule,
     NgxGanttModule,
     NgbModule,
