@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef } from '@angular/core';
+import { Component, ViewChild, ElementRef, OnInit } from '@angular/core';
 import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent } from '@worktile/gantt';
 import { Dependency, DependencyType, Group, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -7,6 +7,7 @@ import { GroupEditModalComponent } from './group-edit-modal/group-edit-modal.com
 import { Chart } from './domain/Chart';
 import { ChartStorageService } from './chart-storage.service';
 import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog/confirm-chart-delete-dialog.component';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-root',
@@ -14,7 +15,7 @@ import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog
   styleUrl: './app.component.scss',
   standalone: false
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
 onSelect($event: GanttSelectedEvent<unknown>) {
   const item = $event.selectedValue as GanttItem<unknown>;
 
@@ -111,10 +112,21 @@ availableCharts: {
 
   showDeleteIcon : boolean = false;
   
-  constructor(private modalService: NgbModal, private chartStorage: ChartStorageService) {
+  constructor(private modalService: NgbModal, private chartStorage: ChartStorageService, private route: ActivatedRoute) {
     this.initWithNewChart();
 
     this.availableCharts = this.chartStorage.getChartList();
+  }
+
+  ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['example'] === 'true') {
+        this.initializeExampleTasksAndGroups();
+      }
+    });
+  }
+  
+  private initializeExampleTasksAndGroups(): void {
     let task0 = new Task();
     task0.id = '000000';
     task0.title = 'Task 0';
