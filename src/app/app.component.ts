@@ -413,8 +413,8 @@ onGroupTitleClick(id: string) {
     newTask.group = group;
     newTask.id = id;
     newTask.title = '';
-    newTask.start = new Date("2025-05-01");
-    newTask.end = new Date("2025-05-01");
+    newTask.start = new Date();
+    newTask.end = new Date();
     console.log(newTask.start);
     newTask.computedStart = newTask.start ? newTask.start : new Date();
     newTask.computedEnd = newTask.end ? newTask.end : new Date();
