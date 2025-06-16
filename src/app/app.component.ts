@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef, OnInit } from '@angular/core';
-import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent } from '@worktile/gantt';
+import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent, GanttBarClickEvent } from '@worktile/gantt';
 import { Dependency, DependencyType, Group, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
@@ -16,6 +16,14 @@ import { ActivatedRoute } from '@angular/router';
   standalone: false
 })
 export class AppComponent implements OnInit {
+
+barClick($event: GanttBarClickEvent<unknown>) {
+  const item = $event.item as GanttItem<unknown>;
+
+  if (item.origin instanceof Task) {
+    this.startTaskEditDialog(item.origin);
+  }
+}
 onSelect($event: GanttSelectedEvent<unknown>) {
   const item = $event.selectedValue as GanttItem<unknown>;
 
