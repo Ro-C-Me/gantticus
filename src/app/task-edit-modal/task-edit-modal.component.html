@@ -54,28 +54,32 @@
       <div class="row mb-3">
         <div class="col">
           <label for="start" class="form-label">von</label>
-          <input id="start"
-                 class="form-control"
-                 formControlName="start"
-                 ngbDatepicker
-                 #d1="ngbDatepicker"
-                 placeholder="yyyy-mm-dd"
-                 [disabled]="taskForm.get('scheduleFinalized')?.value" 
-                 (click)="d1.toggle()" />
+          <div class="d-flex"><input
+            class="form-control"
+            formControlName="start"
+            name="dp"
+            ngbDatepicker
+            #dStart="ngbDatepicker"
+            [disabled]="taskForm.get('scheduleFinalized')?.value"
+          />
+			    <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dStart.toggle()" type="button" [disabled]="taskForm.get('scheduleFinalized')?.value"></button>
+        </div>
           <div *ngIf="taskForm.get('start')?.invalid && taskForm.get('start')?.touched" class="text-danger">
             Startdatum ist erforderlich.
           </div>
         </div>
         <div class="col">
           <label for="end" class="form-label">bis</label>
-          <input id="end"
-                 class="form-control"
-                 formControlName="end"
-                 ngbDatepicker
-                 #d2="ngbDatepicker"
-                 placeholder="yyyy-mm-dd"
-                 [disabled]="taskForm.get('scheduleFinalized')?.value" 
-                 (click)="d2.toggle()" />
+          <div class="d-flex"><input
+            class="form-control"
+            formControlName="end"
+            name="dp"
+            ngbDatepicker
+            #dEnd="ngbDatepicker"
+            [disabled]="taskForm.get('scheduleFinalized')?.value"
+          />
+			    <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dEnd.toggle()" type="button" [disabled]="taskForm.get('scheduleFinalized')?.value"></button>
+        </div>
           <div *ngIf="taskForm.get('end')?.invalid && taskForm.get('end')?.touched" class="text-danger">
             Enddatum ist erforderlich.
           </div>
