@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, LOCALE_ID } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { AppComponent } from './app.component';
 import { GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttLinkLineType, GanttLinkType, NgxGanttModule } from '@worktile/gantt';
@@ -10,7 +10,12 @@ import { GroupTitleComponent } from './group-title/group-title.component';
 import { DependencyManagementComponent } from './dependency-management/dependency-management.component';
 import { routes } from './app.routes';
 import { RouterModule } from '@angular/router';
+import localeDe from '@angular/common/locales/de';
+import localeEn from '@angular/common/locales/en';
+import { registerLocaleData } from '@angular/common';
 
+registerLocaleData(localeDe, 'de');
+registerLocaleData(localeEn, 'en');
 @NgModule({
   declarations: [
     AppComponent
@@ -27,10 +32,11 @@ import { RouterModule } from '@angular/router';
     DependencyManagementComponent
 ],
   providers : [
+    { provide: LOCALE_ID, useValue: navigator.language ?? 'en' },
     {
       provide: GANTT_GLOBAL_CONFIG,
       useValue: {
-        locale: GanttI18nLocale.enUs,
+        locale: GanttI18nLocale.deDe,
         linkOptions: {
           dependencyTypes: [GanttLinkType.ff, GanttLinkType.fs, GanttLinkType.sf, GanttLinkType.ss],
           showArrow: true,

@@ -106,6 +106,17 @@
       </ng-template>
     </ngx-gantt-column>
   </ngx-gantt-table>
+
+  <ngx-gantt-column name="Begin" width="100px">
+    <ng-template #cell let-item="item"> 
+      <span>{{ item.start | date:'shortDate' }}</span>
+    </ng-template>
+  </ngx-gantt-column>
+  <ngx-gantt-column name="End" width="100px">
+    <ng-template #cell let-item="item"> 
+      <span>{{ item.end | date:'shortDate' }}</span>
+    </ng-template>
+  </ngx-gantt-column>
         <!-- group template -->
         <ng-template #group let-group="group" let-items="items">
           <app-group-title 
