@@ -36,7 +36,7 @@ registerLocaleData(localeEn, 'en');
     {
       provide: GANTT_GLOBAL_CONFIG,
       useValue: {
-        locale: GanttI18nLocale.deDe,
+        locale: GanttI18nLocale.enUs,
         linkOptions: {
           dependencyTypes: [GanttLinkType.ff, GanttLinkType.fs, GanttLinkType.sf, GanttLinkType.ss],
           showArrow: true,
