@@ -7,7 +7,7 @@
     <form [formGroup]="taskForm" novalidate>
       <div class="mb-3">
         <label for="title" class="form-label">Titel</label>
-        <input id="title" type="text" class="form-control" formControlName="title" />
+        <input id="title" type="text" class="form-control" formControlName="title" #title />
         <div *ngIf="taskForm.get('title')?.invalid && taskForm.get('title')?.touched" class="text-danger">
           Titel ist erforderlich.
         </div>
