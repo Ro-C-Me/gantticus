@@ -1,4 +1,4 @@
-import { Component, Input, OnInit} from '@angular/core';
+import { Component, Input, OnInit,  ElementRef, AfterViewInit, ViewChild } from '@angular/core';
 import { NgbActiveModal, NgbDateStruct, NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -17,7 +17,9 @@ import { DependencyManagementComponent } from '../dependency-management/dependen
     DependencyManagementComponent
   ]
 })
-export class TaskEditModalComponent implements OnInit {
+export class TaskEditModalComponent implements OnInit, AfterViewInit {
+
+  @ViewChild('title') titleInput!: ElementRef;
 
   @Input() task!: Task;
 
@@ -53,6 +55,10 @@ export class TaskEditModalComponent implements OnInit {
     });
 
     this.dependencies = [...this.task.dependencies];
+  }
+
+  ngAfterViewInit() {
+    this.titleInput.nativeElement.focus();
   }
 
   // Hilfsfunktion: Date zu NgbDateStruct
