@@ -35,6 +35,10 @@ import { RouterModule } from '@angular/router';
           dependencyTypes: [GanttLinkType.ff, GanttLinkType.fs, GanttLinkType.sf, GanttLinkType.ss],
           showArrow: true,
           lineType: GanttLinkLineType.curve
+        },
+        styleOptions: {
+          lineHeight: 25,
+          barHeight: 15
         }
       },
     }
