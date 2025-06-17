@@ -14,12 +14,6 @@ export class ChartStorageService {
   // Chart speichern oder aktualisieren
   saveChart(chart: Chart): void {
 
-
-
-
-    // TODO zum Debuggen: Erst mal aufräumen :D
-    localStorage.removeItem(this.STORAGE_KEY);
-
     const charts = this.getAllCharts();
     const index = charts.findIndex(c => c.id === chart.id);
     if (index == -1) {
