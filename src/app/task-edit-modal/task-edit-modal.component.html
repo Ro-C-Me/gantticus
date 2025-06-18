@@ -1,104 +1,96 @@
 <div class="modal-header">
-    <h5 class="modal-title">Task bearbeiten</h5>
-    <button type="button" class="btn-close" aria-label="Close" (click)="onCancel()"></button>
-  </div>
-  
-  <div class="modal-body">
-    <form [formGroup]="taskForm" novalidate>
-      <div class="mb-3">
-        <label for="title" class="form-label">Titel</label>
-        <input id="title" type="text" class="form-control" formControlName="title" #title />
-        <div *ngIf="taskForm.get('title')?.invalid && taskForm.get('title')?.touched" class="text-danger">
-          Titel ist erforderlich.
-        </div>
-      </div>
-  
-      <div class="mb-3">
-        <label for="ticketUrl" class="form-label">Ticket URL</label>
-        <input id="ticketUrl" type="url" class="form-control" formControlName="ticketUrl" />
-        <div *ngIf="taskForm.get('ticketUrl')?.invalid && taskForm.get('ticketUrl')?.touched" class="text-danger">
-          invalid URL
-        </div>
-      </div>
+  <h5 class="modal-title">Task bearbeiten</h5>
+  <button type="button" class="btn-close" aria-label="Close" (click)="onCancel()"></button>
+</div>
 
-      
-      <div class="mb-3 d-flex align-items-center">
-        <div class="form-check me-3">
-          <input type="checkbox" id="useColor" class="form-check-input" formControlName="useColor">
-          <label class="form-check-label" for="useColor">Use color</label>
-        </div>
-        <input id="color" type="color" class="form-control" formControlName="color" style="width: 60px;">
+<div class="modal-body">
+  <form [formGroup]="taskForm" novalidate>
+    <div class="mb-3">
+      <label for="title" class="form-label">Titel</label>
+      <input id="title" type="text" class="form-control" formControlName="title" #title />
+      <div *ngIf="taskForm.get('title')?.invalid && taskForm.get('title')?.touched" class="text-danger">
+        Titel ist erforderlich.
       </div>
+    </div>
 
-      <div class="form-check mb-3">
-        <input
-          id="milestone"
-          type="checkbox"
-          class="form-check-input"
-          formControlName="milestone"
-        />
-        <label for="milestone" class="form-check-label">Meilenstein</label>
+    <div class="mb-3">
+      <label for="ticketUrl" class="form-label">Ticket URL</label>
+      <input id="ticketUrl" type="url" class="form-control" formControlName="ticketUrl" />
+      <div *ngIf="taskForm.get('ticketUrl')?.invalid && taskForm.get('ticketUrl')?.touched" class="text-danger">
+        invalid URL
       </div>
+    </div>
 
-      <div class="form-check mb-3">
-        <input
-          id="scheduleFinalized"
-          type="checkbox"
-          class="form-check-input"
-          formControlName="scheduleFinalized"
-        />
-        <label for="scheduleFinalized" class="form-check-label">Finalize schedule</label>
-      </div>
 
-      <h6>Zeitplanung</h6>
-      <div class="row mb-3">
-        <div class="col">
-          <label for="start" class="form-label">von</label>
-          <div class="d-flex"><input
-            class="form-control"
-            formControlName="start"
-            name="dp"
-            ngbDatepicker
-            #dStart="ngbDatepicker"
-            [disabled]="taskForm.get('scheduleFinalized')?.value"
-          />
-			    <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dStart.toggle()" type="button" [disabled]="taskForm.get('scheduleFinalized')?.value"></button>
+    <div class="mb-3 d-flex align-items-center">
+      <div class="form-check me-3">
+        <input type="checkbox" id="useColor" class="form-check-input" formControlName="useColor">
+        <label class="form-check-label" for="useColor">Use color</label>
+      </div>
+      <input id="color" type="color" class="form-control" formControlName="color" style="width: 60px;">
+    </div>
+
+    <div class="form-check mb-3">
+      <input id="milestone" type="checkbox" class="form-check-input" formControlName="milestone" />
+      <label for="milestone" class="form-check-label">Meilenstein</label>
+    </div>
+
+    <div class="form-check mb-3">
+      <input id="scheduleFinalized" type="checkbox" class="form-check-input" formControlName="scheduleFinalized" />
+      <label for="scheduleFinalized" class="form-check-label">Finalize schedule</label>
+    </div>
+
+    <h6>Zeitplanung</h6>
+    <div class="row mb-3">
+      <div class="col">
+        <label for="start" class="form-label">von</label>
+        <div class="d-flex"><input class="form-control" formControlName="start" name="dp" ngbDatepicker
+            #dStart="ngbDatepicker" [disabled]="taskForm.get('scheduleFinalized')?.value" />
+          <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dStart.toggle()" type="button"
+            [disabled]="taskForm.get('scheduleFinalized')?.value"></button>
         </div>
-          <div *ngIf="taskForm.get('start')?.invalid && taskForm.get('start')?.touched" class="text-danger">
-            Startdatum ist erforderlich.
-          </div>
-        </div>
-        <div class="col">
-          <label for="end" class="form-label">bis</label>
-          <div class="d-flex"><input
-            class="form-control"
-            formControlName="end"
-            name="dp"
-            ngbDatepicker
-            #dEnd="ngbDatepicker"
-            [disabled]="taskForm.get('scheduleFinalized')?.value"
-          />
-			    <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dEnd.toggle()" type="button" [disabled]="taskForm.get('scheduleFinalized')?.value"></button>
-        </div>
-          <div *ngIf="taskForm.get('end')?.invalid && taskForm.get('end')?.touched" class="text-danger">
-            Enddatum ist erforderlich.
-          </div>
+        <div *ngIf="taskForm.get('start')?.invalid && taskForm.get('start')?.touched" class="text-danger">
+          Startdatum ist erforderlich.
         </div>
       </div>
-      
-      <app-dependency-management
-      [currentTask]="task"
-      [tasks]="tasks"
+      <div class="col">
+        <label for="end" class="form-label">bis</label>
+        <div class="d-flex"><input class="form-control" formControlName="end" name="dp" ngbDatepicker
+            #dEnd="ngbDatepicker" [disabled]="taskForm.get('scheduleFinalized')?.value" />
+          <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dEnd.toggle()" type="button"
+            [disabled]="taskForm.get('scheduleFinalized')?.value"></button>
+        </div>
+        <div *ngIf="taskForm.get('end')?.invalid && taskForm.get('end')?.touched" class="text-danger">
+          Enddatum ist erforderlich.
+        </div>
+      </div>
+    </div>
+
+    <h6>Status</h6>
+    <div class="row mb-3">
+      <div class="col-auto">
+        <app-task-status [(status)]="task.status" [(progress)]="task.progress" [showProgress]="false"></app-task-status>
+      </div>
+      <div class="col">
+        <input [disabled]="this.task.status !== 'IN_PROGRESS'" type="range" id="progress" formControlName="progress" class="form-range" min="0"
+          max="100" step="1" />
+        <div class="d-flex justify-content-between">
+          <span>0%</span>
+          <span>50%</span>
+          <span>100%</span>
+        </div>
+      </div>
+    </div>
+    <app-dependency-management [currentTask]="task" [tasks]="tasks"
       [(dependencies)]="dependencies"></app-dependency-management>
 
 
 
 
-    </form>
-  </div>
-  
-  <div class="modal-footer">
-    <button type="button" class="btn btn-secondary" (click)="onCancel()">Abbrechen</button>
-    <button type="button" class="btn btn-primary" (click)="onOk()">OK</button>
-  </div>
-  
+  </form>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-secondary" (click)="onCancel()">Abbrechen</button>
+  <button type="button" class="btn btn-primary" (click)="onOk()">OK</button>
+</div>

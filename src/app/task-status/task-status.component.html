@@ -1,0 +1,26 @@
+<div class="task-status" (click)="changeStatus($event)" style="cursor: pointer;">
+    <!-- Render the icon based on the current status -->
+     @switch (status) {
+     @case ('OPEN') { <i class="bi bi-circle" title="Open"></i>}
+     @case ('IN_PROGRESS') {
+        <ng-template #popContent>
+            <div class="p-2">
+              <span>{{progress * 100 | number: '1.0-0' }} %</span>
+            </div>
+          </ng-template>
+          
+          <i
+            class="bi bi-arrow-repeat"
+            #popover="ngbPopover"
+            [ngbPopover]="showProgress ? popContent : null"
+            triggers="mouseenter:mouseleave"
+            placement="right"
+            container="body"
+            (mouseenter)="showProgress && popover.open()"
+            (mouseleave)="popover.close()"
+            (wheel)="changeProgress($event)"
+          ></i>
+    }
+     @case ('DONE') { <i class="bi bi-check-circle" title="Open"></i>}
+    }
+  </div>

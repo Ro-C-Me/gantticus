@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { CommonModule } from '@angular/common';
 import { Dependency, Task } from '../domain/Task';
 import { DependencyManagementComponent } from '../dependency-management/dependency-management.component';
+import { TaskStatusComponent } from '../task-status/task-status.component';
 
 @Component({
   selector: 'app-task-edit-modal',
@@ -14,7 +15,8 @@ import { DependencyManagementComponent } from '../dependency-management/dependen
     CommonModule,
     ReactiveFormsModule,
     NgbDatepickerModule,
-    DependencyManagementComponent
+    DependencyManagementComponent,
+    TaskStatusComponent
   ]
 })
 export class TaskEditModalComponent implements OnInit, AfterViewInit {
@@ -40,7 +42,8 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
       milestone: [this.task.milestone],
       scheduleFinalized: [this.task.scheduleFinalized],
       useColor: [this.task.color],
-      color: [{ value: this.task.color || '#6698FF', disabled: !this.task.color }]
+      color: [{ value: this.task.color || '#6698FF', disabled: !this.task.color }],
+      progress: [this.task.progress * 100, [Validators.required, Validators.min(0), Validators.max(100)]]
     });
 
 
@@ -104,6 +107,7 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
     this.task.end = this.fromNgbDate(this.taskForm.value.end)!;
     this.task.milestone = this.taskForm.value.milestone;
     this.task.scheduleFinalized = this.taskForm.value.scheduleFinalized;
+    this.task.progress = this.taskForm.value.progress / 100.0;
     this.task.dependencies = this.dependencies;
     
     if (this.taskForm.value.useColor) {
