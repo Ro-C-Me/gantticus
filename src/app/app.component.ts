@@ -1,6 +1,6 @@
 import { Component, ViewChild, ElementRef, OnInit } from '@angular/core';
 import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent, GanttBarClickEvent } from '@worktile/gantt';
-import { Dependency, DependencyType, Group, Task } from './domain/Task';
+import { Dependency, DependencyType, Group, Status, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
 import { GroupEditModalComponent } from './group-edit-modal/group-edit-modal.component';
@@ -16,6 +16,24 @@ import { ActivatedRoute } from '@angular/router';
   standalone: false
 })
 export class AppComponent implements OnInit {
+
+  taskStatus: Status = Status.OPEN;
+  progress: number = 0.4;
+
+  onStatusChange(task: Task): void {
+    this.updateGanttItems();
+  }
+
+  onProgressChange(item: GanttItem): void {
+    console.log('New task: ', item.origin);
+    if (item.origin instanceof Task) {
+      item.progress = item.origin.progress;
+    }
+    else {
+      console.warn('Item\'s origin is not a Task instance:', item.origin);
+    }
+    this.updateGanttItems();
+  }
 
 barClick($event: GanttBarClickEvent<unknown>) {
   const item = $event.item as GanttItem<unknown>;
@@ -454,6 +472,7 @@ onGroupTitleClick(id: string) {
 
     this.chart.tasks.forEach( t => {
       let item : GanttItem = {title : t.title, id : t.id}; 
+      item.progress = t.progress;
       item.origin = t;
       item.start = t.computedStart;
       item.end = t.computedEnd;

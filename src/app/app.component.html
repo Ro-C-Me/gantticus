@@ -98,6 +98,16 @@
 [quickTimeFocus]="true"
 >
   <ngx-gantt-table [draggable]="true" (dragDropped)="onRowDragDropped($event)">
+    <ngx-gantt-column name="Status" width="100px">
+      <ng-template #cell let-item="item"> 
+        <app-task-status 
+          [(status)]="item.origin.status"
+          (statusChange)="onStatusChange(item)"
+          (progressChange)="onProgressChange(item)"
+          [(progress)]="item.origin.progress"
+        ></app-task-status>
+      </ng-template>
+    </ngx-gantt-column>
     <ngx-gantt-column name="Title" width="200px">
       <ng-template #cell let-item="item"> 
         <app-task-title 
@@ -106,18 +116,17 @@
       ></app-task-title>
       </ng-template>
     </ngx-gantt-column>
+    <ngx-gantt-column name="Begin" width="100px">
+      <ng-template #cell let-item="item"> 
+        <span>{{ item.start | date:'shortDate' }}</span>
+      </ng-template>
+    </ngx-gantt-column>
+    <ngx-gantt-column name="End" width="100px">
+      <ng-template #cell let-item="item"> 
+        <span>{{ item.end | date:'shortDate' }}</span>
+      </ng-template>
+    </ngx-gantt-column>
   </ngx-gantt-table>
-
-  <ngx-gantt-column name="Begin" width="100px">
-    <ng-template #cell let-item="item"> 
-      <span>{{ item.start | date:'shortDate' }}</span>
-    </ng-template>
-  </ngx-gantt-column>
-  <ngx-gantt-column name="End" width="100px">
-    <ng-template #cell let-item="item"> 
-      <span>{{ item.end | date:'shortDate' }}</span>
-    </ng-template>
-  </ngx-gantt-column>
         <!-- group template -->
         <ng-template #group let-group="group" let-items="items">
           <app-group-title 
@@ -125,6 +134,7 @@
         (clicked)="onGroupTitleClick(group.id)"
         (deleted)="onGroupDelete(group.id)"
         (taskAdded)="onAddTask(group.id)"
+        
       ></app-group-title>
         </ng-template>
 </ngx-gantt>

@@ -13,13 +13,14 @@ import { RouterModule } from '@angular/router';
 import localeDe from '@angular/common/locales/de';
 import localeEn from '@angular/common/locales/en';
 import { registerLocaleData } from '@angular/common';
+import { TaskStatusComponent } from "./task-status/task-status.component";
 
 registerLocaleData(localeDe, 'de');
 registerLocaleData(localeEn, 'en');
 @NgModule({
   declarations: [
     AppComponent
-  ],
+    ],
   imports: [
     RouterModule.forRoot(routes),
     BrowserModule,
@@ -29,7 +30,8 @@ registerLocaleData(localeEn, 'en');
     ReactiveFormsModule,
     TaskTitleComponent,
     GroupTitleComponent,
-    DependencyManagementComponent
+    DependencyManagementComponent,
+    TaskStatusComponent
 ],
   providers : [
     { provide: LOCALE_ID, useValue: navigator.language ?? 'en' },

@@ -7,6 +7,12 @@ export enum DependencyType {
   SF = 'sf'
 }
 
+export enum Status {
+  OPEN = 'OPEN',
+  IN_PROGRESS = 'IN_PROGRESS',
+  DONE = 'DONE'
+}
+
 @jsonObject
 export class Dependency {
 
@@ -25,6 +31,10 @@ export class Task {
     @jsonMember
     title: string = '';
 
+    status: Status = Status.OPEN;
+
+    progress: number = 0.0;
+    
     @jsonMember
     ticketUrl: string = '';
 
