@@ -123,7 +123,7 @@
     </ngx-gantt-column>
     <ngx-gantt-column name="End" width="100px">
       <ng-template #cell let-item="item"> 
-        <span>{{ item.end | date:'shortDate' }}</span>
+        <span [ngStyle]="{ color: isOverdue(item.origin) ? 'red' : 'inherit' }">{{ item.end | date:'shortDate' }}</span>
       </ng-template>
     </ngx-gantt-column>
   </ngx-gantt-table>

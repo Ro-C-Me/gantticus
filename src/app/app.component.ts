@@ -17,15 +17,21 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class AppComponent implements OnInit {
 
-  taskStatus: Status = Status.OPEN;
-  progress: number = 0.4;
+  isOverdue(task: Task) : boolean{
+    if (!task.end) {
+      return false;
+    }
+    else {
+      return task.end <  new Date() && task.status != Status.DONE;
+    } 
+}
+  
 
   onStatusChange(task: Task): void {
     this.updateGanttItems();
   }
 
   onProgressChange(item: GanttItem): void {
-    console.log('New task: ', item.origin);
     if (item.origin instanceof Task) {
       item.progress = item.origin.progress;
     }
