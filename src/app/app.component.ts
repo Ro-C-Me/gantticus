@@ -34,7 +34,7 @@ export class AppComponent implements OnInit {
   }
 
   onProgressChange(item: GanttItem): void {
-    this.saveStateForUndo();
+    // Kein explizites saveStateForUndo() hier, da das bereits debounced in der Komponente gemacht wird
     if (item.origin instanceof Task) {
       item.progress = item.origin.progress;
     }

@@ -2,6 +2,8 @@ import { Component, EventEmitter, Input, Output, model} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Task, Status } from '../domain/Task';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { UndoRedoService } from '../undo-redo.service';
+import { Chart } from '../domain/Chart';
 
 @Component({
   selector: 'app-task-status',
@@ -18,6 +20,11 @@ export class TaskStatusComponent {
   @Output() progressChange = new EventEmitter<number>();
 
   @Input() showProgress: boolean = true;
+  
+  // Referenz auf das aktuelle Chart, um Änderungen zu speichern
+  @Input() chart?: Chart;
+  
+  constructor(private undoRedoService: UndoRedoService) {}
 
   onProgressChange() {
     this.progressChange.emit(this.progress);
@@ -33,6 +40,12 @@ export class TaskStatusComponent {
       // Mausrad nach unten: Fortschritt verringern
       this.progress = Math.max(0, this.progress - step);
     }
+    
+    // Debounced Speicherung des Zustands
+    if (this.chart) {
+      this.undoRedoService.debouncedSaveState(this.chart);
+    }
+    
     this.onProgressChange(); // Emit the new progress value
     console.log(this.progress);
   }

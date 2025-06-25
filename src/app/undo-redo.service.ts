@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Chart } from './domain/Chart';
 import { ChartSerialization } from './chart-serialization';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject, timer } from 'rxjs';
+import { debounce } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -15,10 +16,21 @@ export class UndoRedoService {
   private canUndoSubject = new BehaviorSubject<boolean>(false);
   private canRedoSubject = new BehaviorSubject<boolean>(false);
   
+  // Für debounced Save
+  private debouncedSaveSubject = new Subject<Chart>();
+  private debounceTime = 500; // 500ms Verzögerung
+  
   canUndo$ = this.canUndoSubject.asObservable();
   canRedo$ = this.canRedoSubject.asObservable();
 
-  constructor() { }
+  constructor() {
+    // Debounced Save-Mechanismus einrichten
+    this.debouncedSaveSubject.pipe(
+      debounce(() => timer(this.debounceTime))
+    ).subscribe(chart => {
+      this.saveState(chart);
+    });
+  }
 
   /**
    * Speichert den aktuellen Zustand eines Charts im Undo-Stack
@@ -124,6 +136,15 @@ export class UndoRedoService {
   initStateForChart(chart: Chart): void {
     this.clearHistory();
     this.saveState(chart);
+  }
+
+  /**
+   * Speichert den aktuellen Zustand mit Verzögerung (Debouncing)
+   * Ideal für schnell aufeinanderfolgende Änderungen wie Scrollen
+   * @param chart Das zu speichernde Chart
+   */
+  debouncedSaveState(chart: Chart): void {
+    this.debouncedSaveSubject.next(chart);
   }
 
   private updateCanUndo(): void {

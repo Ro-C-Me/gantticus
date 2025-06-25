@@ -115,6 +115,7 @@
           (statusChange)="onStatusChange(item)"
           (progressChange)="onProgressChange(item)"
           [(progress)]="item.origin.progress"
+          [chart]="chart"
         ></app-task-status>
       </ng-template>
     </ngx-gantt-column>
