@@ -38,6 +38,16 @@
           <button class="dropdown-item" (click)="onAddGroup()">Gruppe hinzufügen</button>
         </div>
       </div>
+      
+      <!-- Undo/Redo Buttons -->
+      <div class="btn-group ms-2">
+        <button class="btn btn-outline-secondary" [disabled]="!canUndo" title="Rückgängig" (click)="onUndo()">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </button>
+        <button class="btn btn-outline-secondary" [disabled]="!canRedo" title="Wiederherstellen" (click)="onRedo()">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
     </div>
     <div class="flex-grow-1"></div>
     <!-- Name des Charts, mittig und anklickbar -->
