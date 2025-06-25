@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, OnInit } from '@angular/core';
+import { Component, ViewChild, ElementRef, OnInit, HostListener } from '@angular/core';
 import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent, GanttBarClickEvent } from '@worktile/gantt';
 import { Dependency, DependencyType, Group, Status, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -6,6 +6,7 @@ import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.compon
 import { GroupEditModalComponent } from './group-edit-modal/group-edit-modal.component';
 import { Chart } from './domain/Chart';
 import { ChartStorageService } from './chart-storage.service';
+import { UndoRedoService } from './undo-redo.service';
 import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog/confirm-chart-delete-dialog.component';
 import { ActivatedRoute } from '@angular/router';
 
@@ -28,10 +29,12 @@ export class AppComponent implements OnInit {
   
 
   onStatusChange(task: Task): void {
+    this.saveStateForUndo();
     this.updateGanttItems();
   }
 
   onProgressChange(item: GanttItem): void {
+    this.saveStateForUndo();
     if (item.origin instanceof Task) {
       item.progress = item.origin.progress;
     }
@@ -58,6 +61,7 @@ onSelect($event: GanttSelectedEvent<unknown>) {
 
 lineClick($event: GanttLineClickEvent<unknown>) {
   if ($event.target.origin instanceof Task) {
+    this.saveStateForUndo();
     $event.target.origin.dependencies = $event.target.origin.dependencies.filter(d => d.taskId != $event.source.id);
     this.updateGanttItems();
   } 
@@ -71,6 +75,7 @@ onLinkFinished(event: GanttLinkDragEvent<unknown>) {
 
     const task : Task | undefined = this.chart.tasks.find(t => t.id == event.target!.id);
     if (task) {
+      this.saveStateForUndo();
       task.dependencies.push(dependency);
       this.updateGanttItems();
     }
@@ -143,11 +148,24 @@ availableCharts: {
   viewType : GanttViewType = GanttViewType.day;
 
   showDeleteIcon : boolean = false;
+
+  // Properties für Undo/Redo
+  canUndo = false;
+  canRedo = false;
   
-  constructor(private modalService: NgbModal, private chartStorage: ChartStorageService, private route: ActivatedRoute) {
+  constructor(
+    private modalService: NgbModal, 
+    private chartStorage: ChartStorageService, 
+    private undoRedoService: UndoRedoService,
+    private route: ActivatedRoute
+  ) {
     this.initWithNewChart();
 
     this.availableCharts = this.chartStorage.getChartList();
+    
+    // Status der Undo/Redo-Buttons abonnieren
+    this.undoRedoService.canUndo$.subscribe(can => this.canUndo = can);
+    this.undoRedoService.canRedo$.subscribe(can => this.canRedo = can);
   }
 
   ngOnInit() {
@@ -156,6 +174,29 @@ availableCharts: {
         this.initializeExampleTasksAndGroups();
       }
     });
+  }
+
+  // Tastaturkürzel für Undo (Strg+Z) und Redo (Strg+Y)
+  @HostListener('window:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent) {
+    // Prüfen ob ein modales Fenster geöffnet ist (NgbModal fügt eine .modal.show Klasse hinzu)
+    if (document.querySelector('.modal.show')) {
+      return; // Modales Fenster aktiv, keine Tastaturkürzel verwenden
+    }
+    
+    // Wenn in einem Eingabefeld, nicht abfangen
+    if (document.activeElement instanceof HTMLInputElement || 
+        document.activeElement instanceof HTMLTextAreaElement) {
+      return;
+    }
+    
+    if (event.ctrlKey && event.key === 'z') {
+      event.preventDefault();
+      this.onUndo();
+    } else if (event.ctrlKey && event.key === 'y') {
+      event.preventDefault();
+      this.onRedo();
+    }
   }
   
   private initializeExampleTasksAndGroups(): void {
@@ -233,6 +274,7 @@ availableCharts: {
     this.chart.id = this.createId();
     this.chart.name = 'New Gantt chart';
     this.updateGanttItems();
+    this.undoRedoService.initStateForChart(this.chart);
   }
 
 onGroupTitleClick(id: string) {
@@ -243,6 +285,7 @@ onGroupTitleClick(id: string) {
 }
 
   onTaskDelete(id: string) {
+    this.saveStateForUndo();
     this.deleteTaskById(id);
     this.updateGanttItems();
   }
@@ -272,6 +315,7 @@ onGroupTitleClick(id: string) {
       console.log("no group to delete with id " + id);
     }
     else {
+      this.saveStateForUndo();
       this.deleteGroup(group!);
     }
   }
@@ -292,6 +336,7 @@ onGroupTitleClick(id: string) {
 
     modalRef.result.then(
       (result) => {
+        this.saveStateForUndo();
         this.replaceTaskById(result);
         
         this.recomputeTasks(result);
@@ -338,6 +383,7 @@ onGroupTitleClick(id: string) {
 
     modalRef.result.then(
       (result) => {
+        this.saveStateForUndo();
         this.replaceGroupById(result);
         
         this.recomputeTasks(result);
@@ -378,6 +424,7 @@ onGroupTitleClick(id: string) {
         console.error("no task to change!");
       }
       else {
+        this.saveStateForUndo();
         toChange.start = this.toDate($event.item.start);
         toChange.end = this.toDate($event.item.end);
         this.recomputeTasks(toChange);
@@ -423,11 +470,12 @@ onGroupTitleClick(id: string) {
             console.error("origin is no Task!");
             return;
           }
-          else if (taskToMove.group != $event.target.origin.group) {
+          else        if (taskToMove.group != $event.target.origin.group) {
             console.log("group changed by drag&drop from " + taskToMove.group + " to " + $event.target.origin.group);
             taskToMove.group = $event.target.origin.group;
           }
 
+          this.saveStateForUndo();
           if ($event.dropPosition == "after") {
             targetIndex++;
           }
@@ -441,6 +489,7 @@ onGroupTitleClick(id: string) {
 
 
   onAddTask(group? : string) {
+    this.saveStateForUndo();
     let id = this.createId();
     let newTask: Task = new Task();
     newTask.group = group;
@@ -454,7 +503,6 @@ onGroupTitleClick(id: string) {
     this.chart.tasks.push(newTask);
     this.updateGanttItems();
     this.startTaskEditDialog(newTask);
-
   }
 
   private createId() {
@@ -462,6 +510,7 @@ onGroupTitleClick(id: string) {
   }
 
   onAddGroup() {
+    this.saveStateForUndo();
     let id = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
     let newGroup: Group = new Group();
     newGroup.id = id;
@@ -558,6 +607,7 @@ onGroupTitleClick(id: string) {
     else {
       this.chart =  loadedChart;
       this.updateGanttItems();
+      this.undoRedoService.initStateForChart(this.chart);
     }
   }
   onSave() {
@@ -572,11 +622,41 @@ onGroupTitleClick(id: string) {
   }
   
   onSaveName(newName: string) {
-    this.chart.name = newName;
+    if (this.chart.name !== newName) {
+      this.saveStateForUndo();
+      this.chart.name = newName;
+    }
     this.isEditingName = false;
   }
   
   onCancelEdit() {
     this.isEditingName = false;
+  }
+
+  // Speichert den aktuellen Zustand für Undo
+  saveStateForUndo() {
+    this.undoRedoService.saveState(this.chart);
+  }
+
+  // Undo-Operation ausführen
+  onUndo() {
+    if (!this.canUndo) return;
+    
+    const previousChart = this.undoRedoService.undo(this.chart);
+    if (previousChart) {
+      this.chart = previousChart;
+      this.updateGanttItems();
+    }
+  }
+
+  // Redo-Operation ausführen
+  onRedo() {
+    if (!this.canRedo) return;
+
+    const nextChart = this.undoRedoService.redo(this.chart);
+    if (nextChart) {
+      this.chart = nextChart;
+      this.updateGanttItems();
+    }
   }
 }
