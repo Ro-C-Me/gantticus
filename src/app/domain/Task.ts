@@ -31,8 +31,10 @@ export class Task {
     @jsonMember
     title: string = '';
 
+    @jsonMember
     status: Status = Status.OPEN;
 
+    @jsonMember
     progress: number = 0.0;
     
     @jsonMember
