@@ -1,6 +1,6 @@
 <!-- task-title.component.html -->
 <div (mouseenter)="showIcons = true" (mouseleave)="showIcons = false">
-    <a *ngIf="hasUrl()" target="_blank" [href]="getUrl()" rel="noopener" (click)="$event.stopPropagation()">
+    <a *ngIf="hasUrl()" target="_blank" [href]="getUrl()" rel="noopener" [title]="getUrl()" (click)="$event.stopPropagation()">
       {{ item.title }}
     </a>
     <span *ngIf="!hasUrl()">{{ item.title }}</span>
