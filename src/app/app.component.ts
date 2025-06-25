@@ -381,6 +381,7 @@ onGroupTitleClick(id: string) {
         toChange.start = this.toDate($event.item.start);
         toChange.end = this.toDate($event.item.end);
         this.recomputeTasks(toChange);
+        this.updateGanttItems();
       }
     }
 
