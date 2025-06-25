@@ -35,3 +35,35 @@
     padding: 0.375rem 0.75rem;
     height: auto;
   }
+
+  /* Verbesserte Stile für Undo/Redo-Buttons */
+  .btn-group .btn {
+    transition: all 0.3s ease;
+    
+    /* Visueller Effekt für aktive/inaktive Buttons */
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    
+    /* Hintergrund-Effekt für aktive Buttons */
+    &.btn-primary {
+      font-weight: 500;
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      }
+    }
+    
+    /* Ein subtiler Hinweis für aktive Buttons */
+    &:not(:disabled) i {
+      animation: subtle-pulse 2s infinite;
+    }
+  }
+  
+  /* Subtle animation for active buttons */
+  @keyframes subtle-pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+  }
