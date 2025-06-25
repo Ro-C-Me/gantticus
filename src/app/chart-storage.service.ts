@@ -1,13 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Chart } from './domain/Chart';
-import { TypedJSON } from 'typedjson';
+import { ChartSerialization } from './chart-serialization';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChartStorageService {
-
-  private serializer = new TypedJSON(Chart);
 
   private readonly STORAGE_KEY = 'charts';
 
@@ -27,7 +25,7 @@ export class ChartStorageService {
   }
 
   private saveCharts(charts: Chart[]) {
-    const toSave = JSON.stringify(charts);
+    const toSave = ChartSerialization.serialize(charts);
     console.log('saving charts:');
     console.log(toSave);
     localStorage.setItem(this.STORAGE_KEY, toSave);
@@ -54,7 +52,7 @@ export class ChartStorageService {
     if (!stored) return [];
     console.log("parsing stored charts:");
     console.log(stored);
-    const loadedCharts = this.serializer.parseAsArray(stored);
+    const loadedCharts = ChartSerialization.deserializeArray(stored);
     return loadedCharts;
   }
 
