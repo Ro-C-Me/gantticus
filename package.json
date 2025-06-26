@@ -25,6 +25,7 @@
     "bootstrap": "^5.3.6",
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
+    "ngx-color-picker": "^20.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
