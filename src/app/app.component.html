@@ -39,20 +39,12 @@
         </div>
       </div>
       
-      <!-- Undo/Redo Buttons mit besserer visueller Unterscheidung -->
+      <!-- Undo/Redo Buttons -->
       <div class="btn-group ms-2">
-        <button class="btn" 
-                [ngClass]="canUndo ? 'btn-primary' : 'btn-outline-secondary'" 
-                [disabled]="!canUndo" 
-                title="Rückgängig (Strg+Z)" 
-                (click)="onUndo()">
+        <button class="btn btn-outline-secondary" [disabled]="!canUndo" title="Rückgängig" (click)="onUndo()">
           <i class="bi bi-arrow-counterclockwise"></i>
         </button>
-        <button class="btn" 
-                [ngClass]="canRedo ? 'btn-primary' : 'btn-outline-secondary'" 
-                [disabled]="!canRedo" 
-                title="Wiederherstellen (Strg+Y)" 
-                (click)="onRedo()">
+        <button class="btn btn-outline-secondary" [disabled]="!canRedo" title="Wiederherstellen" (click)="onRedo()">
           <i class="bi bi-arrow-clockwise"></i>
         </button>
       </div>
