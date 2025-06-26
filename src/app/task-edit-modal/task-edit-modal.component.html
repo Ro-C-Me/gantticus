@@ -22,20 +22,13 @@
     </div>
 
 
-    <div class="mb-3 d-flex align-items-center">
-      <div class="form-check me-3">
-        <input type="checkbox" id="useColor" class="form-check-input" formControlName="useColor">
-        <label class="form-check-label" for="useColor">Use color</label>
-      </div>
-      <div class="color-picker-container d-flex align-items-center">
-        <input
-          [(colorPicker)]="color"
-         [style.background]="color"
-         [cpPresetColors]="recentColors"
-         (colorPickerOpen)="onColorPickerOpen()"
-         (colorPickerClose)="onColorChange($event)"
-         />
-      </div>
+    <div class="mb-3">
+      <app-color-selection 
+        [(selectedColor)]="color" 
+        [(useColor)]="taskForm.value.useColor"
+        (selectedColorChange)="onColorChanged($event)"
+        (useColorChange)="onUseColorChanged($event)">
+      </app-color-selection>
     </div>
 
     <div class="form-check mb-3">
