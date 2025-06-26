@@ -1,0 +1,15 @@
+<div [formGroup]="colorForm" class="d-flex align-items-center">
+  <div class="form-check me-3">
+    <input type="checkbox" id="useColor" class="form-check-input" formControlName="useColor">
+    <label class="form-check-label" for="useColor">Use color</label>
+  </div>
+  <div class="color-picker-container d-flex align-items-center">
+    <input
+      [(colorPicker)]="selectedColor"
+      [style.background]="selectedColor"
+      [cpPresetColors]="recentColors"
+      (colorPickerOpen)="onColorPickerOpen()"
+      (colorPickerClose)="onColorChange($event)"
+    />
+  </div>
+</div>
