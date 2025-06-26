@@ -32,6 +32,7 @@
           [(colorPicker)]="color"
          [style.background]="color"
          [cpPresetColors]="recentColors"
+         (colorPickerOpen)="onColorPickerOpen()"
          (colorPickerClose)="onColorChange($event)"
          />
       </div>
