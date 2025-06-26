@@ -29,6 +29,7 @@ export class AppComponent implements OnInit {
   
 
   onStatusChange(task: Task): void {
+    // Erst speichern, dann UI aktualisieren
     this.saveStateForUndo();
     this.updateGanttItems();
   }
@@ -61,8 +62,10 @@ onSelect($event: GanttSelectedEvent<unknown>) {
 
 lineClick($event: GanttLineClickEvent<unknown>) {
   if ($event.target.origin instanceof Task) {
-    this.saveStateForUndo();
+    // Erst die Änderung vornehmen
     $event.target.origin.dependencies = $event.target.origin.dependencies.filter(d => d.taskId != $event.source.id);
+    // Dann für Undo speichern
+    this.saveStateForUndo();
     this.updateGanttItems();
   } 
 }
@@ -75,8 +78,10 @@ onLinkFinished(event: GanttLinkDragEvent<unknown>) {
 
     const task : Task | undefined = this.chart.tasks.find(t => t.id == event.target!.id);
     if (task) {
-      this.saveStateForUndo();
+      // Erst die Abhängigkeit hinzufügen
       task.dependencies.push(dependency);
+      // Dann für Undo speichern
+      this.saveStateForUndo();
       this.updateGanttItems();
     }
   }
@@ -285,8 +290,10 @@ onGroupTitleClick(id: string) {
 }
 
   onTaskDelete(id: string) {
-    this.saveStateForUndo();
+    // Erst den Task löschen
     this.deleteTaskById(id);
+    // Dann für Undo speichern
+    this.saveStateForUndo();
     this.updateGanttItems();
   }
 
@@ -315,8 +322,9 @@ onGroupTitleClick(id: string) {
       console.log("no group to delete with id " + id);
     }
     else {
-      this.saveStateForUndo();
+      // Erst die Gruppe löschen
       this.deleteGroup(group!);
+      // Dann für Undo speichern (wird in deleteGroup bereits gemacht)
     }
   }
 
@@ -326,6 +334,9 @@ onGroupTitleClick(id: string) {
       this.deleteTask(t);
     });
     this.chart.groups = this.chart.groups.filter(g => g.id != group.id);
+    
+    // Zustand für Undo speichern
+    this.saveStateForUndo();
     this.updateGanttItems();
   }
 
@@ -336,10 +347,12 @@ onGroupTitleClick(id: string) {
 
     modalRef.result.then(
       (result) => {
-        this.saveStateForUndo();
+        // Erst den Task ersetzen
         this.replaceTaskById(result);
-        
         this.recomputeTasks(result);
+        
+        // Dann für Undo speichern
+        this.saveStateForUndo();
         this.updateGanttItems();
       },
       (reason) => {
@@ -383,10 +396,12 @@ onGroupTitleClick(id: string) {
 
     modalRef.result.then(
       (result) => {
-        this.saveStateForUndo();
+        // Erst die Gruppe ersetzen
         this.replaceGroupById(result);
-        
         this.recomputeTasks(result);
+        
+        // Dann für Undo speichern
+        this.saveStateForUndo();
         this.updateGanttItems();
       },
       (reason) => {
@@ -424,10 +439,13 @@ onGroupTitleClick(id: string) {
         console.error("no task to change!");
       }
       else {
-        this.saveStateForUndo();
+        // Erst die Änderungen am Task vornehmen
         toChange.start = this.toDate($event.item.start);
         toChange.end = this.toDate($event.item.end);
         this.recomputeTasks(toChange);
+        
+        // Danach den Zustand speichern und die Benutzeroberfläche aktualisieren
+        this.saveStateForUndo();
         this.updateGanttItems();
       }
     }
@@ -475,12 +493,15 @@ onGroupTitleClick(id: string) {
             taskToMove.group = $event.target.origin.group;
           }
 
-          this.saveStateForUndo();
+          // Erst alle Änderungen durchführen
           if ($event.dropPosition == "after") {
             targetIndex++;
           }
           this.chart.tasks.splice(this.chart.tasks.indexOf(taskToMove), 1);
           this.chart.tasks.splice(targetIndex, 0, taskToMove);
+          
+          // Dann den Zustand für Undo speichern
+          this.saveStateForUndo();
         }
 
         this.updateGanttItems();
@@ -489,7 +510,6 @@ onGroupTitleClick(id: string) {
 
 
   onAddTask(group? : string) {
-    this.saveStateForUndo();
     let id = this.createId();
     let newTask: Task = new Task();
     newTask.group = group;
@@ -501,6 +521,9 @@ onGroupTitleClick(id: string) {
     newTask.computedStart = newTask.start ? newTask.start : new Date();
     newTask.computedEnd = newTask.end ? newTask.end : new Date();
     this.chart.tasks.push(newTask);
+    
+    // Erst den Task erstellen, dann für Undo speichern
+    this.saveStateForUndo();
     this.updateGanttItems();
     this.startTaskEditDialog(newTask);
   }
@@ -510,12 +533,14 @@ onGroupTitleClick(id: string) {
   }
 
   onAddGroup() {
-    this.saveStateForUndo();
     let id = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
     let newGroup: Group = new Group();
     newGroup.id = id;
     newGroup.title = '';
     this.chart.groups.push(newGroup);
+    
+    // Erst die Gruppe erstellen, dann für Undo speichern
+    this.saveStateForUndo();
     this.updateGanttItems();
     this.startGroupEditDialog(newGroup);
   }
@@ -623,8 +648,10 @@ onGroupTitleClick(id: string) {
   
   onSaveName(newName: string) {
     if (this.chart.name !== newName) {
-      this.saveStateForUndo();
+      // Erst den Namen ändern
       this.chart.name = newName;
+      // Dann für Undo speichern
+      this.saveStateForUndo();
     }
     this.isEditingName = false;
   }
