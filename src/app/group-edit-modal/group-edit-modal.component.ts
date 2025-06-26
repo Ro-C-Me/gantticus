@@ -3,10 +3,11 @@ import { NgbActiveModal, NgbDateStruct, NgbDatepickerModule } from '@ng-bootstra
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Group } from '../domain/Task';
+import { ColorSelectionComponent } from '../color-selection/color-selection.component';
 
 @Component({
   selector: 'app-group-edit-modal',
-  imports: [ReactiveFormsModule, CommonModule],
+  imports: [ReactiveFormsModule, CommonModule, ColorSelectionComponent],
   templateUrl: './group-edit-modal.component.html',
   styleUrl: './group-edit-modal.component.scss'
 })
@@ -14,6 +15,7 @@ export class GroupEditModalComponent {
   @Input() group!: Group;
 
   groupForm!: FormGroup;
+  selectedColor: string = '#6698FF';
 
   constructor(public activeModal: NgbActiveModal, private fb: FormBuilder) {
 
@@ -22,24 +24,22 @@ export class GroupEditModalComponent {
   ngOnInit() {
     this.groupForm = this.fb.group({
       title: [this.group.title, Validators.required],
-      useColor: [this.group.color],
-      color: [{ value: this.group.color || '#6698FF', disabled: !this.group.color }]
+      useColor: [!!this.group.color],
+      color: [this.group.color || '#6698FF']
     });
 
-    this.groupForm.get('useColor')?.valueChanges.subscribe(useColor => {
-      const colorControl = this.groupForm.get('color');
-      if (useColor) {
-        colorControl?.enable();
-        // Optional: Standardfarbe setzen, falls leer
-        if (!colorControl?.value) colorControl?.setValue('#6698FF');
-      } else {
-        colorControl?.disable();
-        // Optional: Wert zurücksetzen, falls gewünscht
-        // colorControl?.setValue(null);
-      }
-    });
+    this.selectedColor = this.group.color || '#6698FF';
 
   }
+  onColorChanged(color: string) {
+    this.selectedColor = color;
+    this.groupForm.get('color')?.setValue(color);
+  }
+
+  onUseColorChanged(useColor: boolean) {
+    this.groupForm.get('useColor')?.setValue(useColor);
+  }
+
   onCancel() {
     this.activeModal.dismiss();
   }
@@ -53,7 +53,7 @@ export class GroupEditModalComponent {
     // Änderungen übernehmen
     this.group.title = this.groupForm.value.title;
     if (this.groupForm.value.useColor) {
-      this.group.color = this.groupForm.value.color;
+      this.group.color = this.selectedColor;
     }
     else {
       this.group.color = undefined;
