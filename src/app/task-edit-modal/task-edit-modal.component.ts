@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { Dependency, Task } from '../domain/Task';
 import { DependencyManagementComponent } from '../dependency-management/dependency-management.component';
 import { TaskStatusComponent } from '../task-status/task-status.component';
+import { ColorPickerDirective } from 'ngx-color-picker';
 
 @Component({
   selector: 'app-task-edit-modal',
@@ -16,7 +17,8 @@ import { TaskStatusComponent } from '../task-status/task-status.component';
     ReactiveFormsModule,
     NgbDatepickerModule,
     DependencyManagementComponent,
-    TaskStatusComponent
+    TaskStatusComponent,
+    ColorPickerDirective
   ]
 })
 export class TaskEditModalComponent implements OnInit, AfterViewInit {
@@ -31,7 +33,17 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
 
   taskForm!: FormGroup;
 
-  constructor(public activeModal: NgbActiveModal, private fb: FormBuilder) {}
+  recentColors: string[] = [];
+
+  color: string = '#6698FF';
+
+  constructor(public activeModal: NgbActiveModal, private fb: FormBuilder) {
+    // Lade zuletzt verwendete Farben aus dem localStorage
+    const savedColors = localStorage.getItem('recentTaskColors');
+    if (savedColors) {
+      this.recentColors = JSON.parse(savedColors);
+    }
+  }
 
   ngOnInit() {
     this.taskForm = this.fb.group({
@@ -46,7 +58,8 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
       progress: [this.task.progress * 100, [Validators.required, Validators.min(0), Validators.max(100)]]
     });
 
-
+    this.color = this.taskForm.get('color')?.value || '#6698FF';
+    
     this.taskForm.get('useColor')?.valueChanges.subscribe(useColor => {
       const colorControl = this.taskForm.get('color');
       if (useColor) {
@@ -91,6 +104,20 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
     this.activeModal.dismiss();
   }
 
+  onColorChange(color: string) {
+    this.color = color;
+    
+    // Nur speichern, wenn es sich um eine neue Farbe handelt
+    if (!this.recentColors.includes(color)) {
+      // Füge die neue Farbe am Anfang hinzu und begrenze auf maximal 10 Farben
+      this.recentColors = [color, ...this.recentColors.slice(0, 9)];
+      const newLocal = JSON.stringify(this.recentColors);
+      console.log("Aktualisierte zuletzt verwendete Farben: ", newLocal); 
+      // Speichere im localStorage
+      localStorage.setItem('recentTaskColors', newLocal);
+    }
+  }
+
   onOk() {
     if (this.taskForm.invalid) {
       this.taskForm.markAllAsTouched();
@@ -111,7 +138,12 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
     this.task.dependencies = this.dependencies;
     
     if (this.taskForm.value.useColor) {
-      this.task.color = this.taskForm.value.color;
+      this.task.color = this.color;
+      // Füge die Farbe zu den zuletzt verwendeten Farben hinzu, wenn sie neu ist
+      if (!this.recentColors.includes(this.color)) {
+        this.recentColors = [this.color, ...this.recentColors.slice(0, 9)];
+        localStorage.setItem('recentTaskColors', JSON.stringify(this.recentColors));
+      }
     }
     else {
       this.task.color = undefined;

@@ -27,7 +27,14 @@
         <input type="checkbox" id="useColor" class="form-check-input" formControlName="useColor">
         <label class="form-check-label" for="useColor">Use color</label>
       </div>
-      <input id="color" type="color" class="form-control" formControlName="color" style="width: 60px;">
+      <div class="color-picker-container d-flex align-items-center">
+        <input
+          [(colorPicker)]="color"
+         [style.background]="color"
+         [cpPresetColors]="recentColors"
+         (colorPickerClose)="onColorChange($event)"
+         />
+      </div>
     </div>
 
     <div class="form-check mb-3">
