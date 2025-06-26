@@ -104,6 +104,10 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
     this.activeModal.dismiss();
   }
 
+  onColorPickerOpen() {
+    this.taskForm.get('useColor')?.setValue(true);
+  }
+
   onColorChange(color: string) {
     this.color = color;
     
