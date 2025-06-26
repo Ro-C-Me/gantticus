@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+
+.color-picker-container {
+  input {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+}
