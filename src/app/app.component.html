@@ -1,4 +1,21 @@
 <div class="app-container d-flex flex-column vh-100">
+  <!-- Toast Container -->
+  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1200;">
+    <ngb-toast
+      *ngFor="let toast of toasts"
+      [class]="toast.classname"
+      [autohide]="true"
+      [delay]="5000"
+      (hidden)="removeToast(toast)"
+    >
+      <ng-template ngbToastHeader>
+        <i class="bi me-2" [class]="toast.icon"></i>
+        <strong class="me-auto">{{ toast.header }}</strong>
+      </ng-template>
+      {{ toast.body }}
+    </ngb-toast>
+  </div>
+
   <nav class="navbar navbar-expand-lg bg-body-termiary border-bottom">
     <div class="container-fluid">
       <!-- App-Titel links -->
@@ -90,9 +107,27 @@
       <button class="btn btn-outline-danger me-2" (click)="onDeleteChart(chart)">
         <i class="bi bi-trash"></i> Löschen
       </button>
-      <button class="btn btn-primary" (click)="onSave()">
+      <button class="btn btn-primary me-2" (click)="onSave()">
         <i class="bi bi-save"></i> Speichern
       </button>
+      
+      <!-- Export-Dropdown -->
+      <div ngbDropdown class="btn-group">
+        <button class="btn btn-outline-secondary" (click)="onHtmlExport()" title="HTML Export in Zwischenablage">
+          <i class="bi bi-table"></i>
+        </button>
+        <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" ngbDropdownToggle>
+          <span class="visually-hidden">Export-Optionen öffnen</span>
+        </button>
+        <div ngbDropdownMenu>
+          <button class="dropdown-item" (click)="onHtmlExport()">
+            <i class="bi bi-table"></i> HTML Export
+          </button>
+          <button class="dropdown-item" (click)="onCsvExport()">
+            <i class="bi bi-clipboard"></i> CSV Export
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 

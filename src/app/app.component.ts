@@ -18,6 +18,9 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class AppComponent implements OnInit {
 
+  // Toast-Benachrichtigungen
+  toasts: any[] = [];
+
   isOverdue(task: Task) : boolean{
     if (!task.end) {
       return false;
@@ -684,6 +687,233 @@ onGroupTitleClick(id: string) {
     if (nextChart) {
       this.chart = nextChart;
       this.updateGanttItems();
+    }
+  }
+
+  // CSV-Export in die Zwischenablage
+  async onCsvExport() {
+    try {
+      const csvContent = this.generateCsvContent();
+      await navigator.clipboard.writeText(csvContent);
+      
+      // Toast-Benachrichtigung statt Alert
+      this.showToast('CSV Export erfolgreich', 'Die Daten wurden in die Zwischenablage kopiert.', 'success');
+    } catch (error) {
+      console.error('Fehler beim Kopieren in die Zwischenablage:', error);
+      this.showToast('Fehler beim Export', 'Die Daten konnten nicht in die Zwischenablage kopiert werden.', 'error');
+    }
+  }
+
+  // HTML-Export in die Zwischenablage
+  async onHtmlExport() {
+    try {
+      const htmlContent = this.generateHtmlTable();
+      
+      // HTML sowohl als text/html als auch als text/plain in die Zwischenablage
+      const clipboardItem = new ClipboardItem({
+        'text/html': new Blob([htmlContent], { type: 'text/html' }),
+        'text/plain': new Blob([this.stripHtmlTags(htmlContent)], { type: 'text/plain' })
+      });
+      
+      await navigator.clipboard.write([clipboardItem]);
+      
+      this.showToast('HTML Export erfolgreich', 'Die formatierte Tabelle wurde in die Zwischenablage kopiert.', 'success');
+    } catch (error) {
+      console.error('Fehler beim HTML-Export:', error);
+      // Fallback: Als reiner Text
+      try {
+        const htmlContent = this.generateHtmlTable();
+        await navigator.clipboard.writeText(htmlContent);
+        this.showToast('HTML Export (Fallback)', 'HTML-Code wurde als Text in die Zwischenablage kopiert.', 'info');
+      } catch (fallbackError) {
+        this.showToast('Fehler beim Export', 'Die Daten konnten nicht in die Zwischenablage kopiert werden.', 'error');
+      }
+    }
+  }
+
+  private generateCsvContent(): string {
+    const lines: string[] = [];
+    
+    // Header
+    lines.push('Name,Start,Ende,URL');
+    
+    // Gruppierte Tasks
+    if (this.chart.groups && this.chart.groups.length > 0) {
+      for (const group of this.chart.groups) {
+        // Gruppe als eigene Zeile
+        lines.push(`"${group.title}","","",""`);
+        
+        // Tasks der Gruppe
+        const groupTasks = this.chart.tasks.filter(task => task.group === group.id);
+        for (const task of groupTasks) {
+          const startDate = task.start ? this.formatDateForCsv(task.start) : '';
+          const endDate = task.end ? this.formatDateForCsv(task.end) : '';
+          const url = task.ticketUrl || '';
+          lines.push(`"${task.title}","${startDate}","${endDate}","${url}"`);
+        }
+      }
+    }
+    
+    // Tasks ohne Gruppe
+    const ungroupedTasks = this.chart.tasks.filter(task => !task.group || task.group === '');
+    if (ungroupedTasks.length > 0) {
+      // Leerzeile vor ungroupierten Tasks (falls es Gruppen gibt)
+      if (this.chart.groups && this.chart.groups.length > 0) {
+        lines.push('');
+      }
+      
+      for (const task of ungroupedTasks) {
+        const startDate = task.start ? this.formatDateForCsv(task.start) : '';
+        const endDate = task.end ? this.formatDateForCsv(task.end) : '';
+        const url = task.ticketUrl || '';
+        lines.push(`"${task.title}","${startDate}","${endDate}","${url}"`);
+      }
+    }
+    
+    return lines.join('\n');
+  }
+
+  private formatDateForCsv(date: Date): string {
+    // Deutsches Format (DD.MM.YYYY)
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  }
+
+  private generateHtmlTable(): string {
+    let html = `
+<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; font-family: Arial, sans-serif;">
+  <thead>
+    <tr style="background-color: #f8f9fa; font-weight: bold;">
+      <th style="border: 1px solid #dee2e6; padding: 8px;">Name</th>
+      <th style="border: 1px solid #dee2e6; padding: 8px;">Start</th>
+      <th style="border: 1px solid #dee2e6; padding: 8px;">Ende</th>
+      <th style="border: 1px solid #dee2e6; padding: 8px;">URL</th>
+    </tr>
+  </thead>
+  <tbody>`;
+
+    // Gruppierte Tasks
+    if (this.chart.groups && this.chart.groups.length > 0) {
+      for (const group of this.chart.groups) {
+        const groupTasks = this.chart.tasks.filter(task => task.group === group.id);
+        const groupColor = group.color || '#e9ecef';
+        
+        // Gruppe als verbundene Zeile
+        html += `
+    <tr style="background-color: ${groupColor}; font-weight: bold;">
+      <td colspan="4" style="border: 1px solid #dee2e6; padding: 8px; text-align: center;">
+        ${this.escapeHtml(group.title)}
+      </td>
+    </tr>`;
+        
+        // Tasks der Gruppe
+        for (const task of groupTasks) {
+          const startDate = task.start ? this.formatDateForCsv(task.start) : '';
+          const endDate = task.end ? this.formatDateForCsv(task.end) : '';
+          const url = task.ticketUrl || '';
+          const taskColor = task.color || '#ffffff';
+          
+          // Styling für abgeschlossene Tasks oder überfällige Tasks
+          const isCompleted = task.status === Status.DONE;
+          const isOverdue = this.isOverdue(task);
+          const taskTextColor = isCompleted ? '#6c757d' : '#000000'; // Grau für abgeschlossene Tasks
+          const endDateColor = isOverdue ? 'red' : (isCompleted ? '#6c757d' : '#000000'); // Rot für überfällige, grau für abgeschlossene
+          
+          html += `
+    <tr style="background-color: ${taskColor}; color: ${taskTextColor};">
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${this.escapeHtml(task.title)}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${startDate}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px; color: ${endDateColor};">${endDate}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${url ? `<a href="${this.escapeHtml(url)}" target="_blank" style="color: ${taskTextColor};">${this.escapeHtml(url)}</a>` : ''}</td>
+    </tr>`;
+        }
+      }
+    }
+    
+    // Tasks ohne Gruppe
+    const ungroupedTasks = this.chart.tasks.filter(task => !task.group || task.group === '');
+    if (ungroupedTasks.length > 0) {
+      // Trennzeile falls es Gruppen gibt
+      if (this.chart.groups && this.chart.groups.length > 0) {
+        html += `
+    <tr>
+      <td colspan="4" style="border: 1px solid #dee2e6; padding: 4px; background-color: #f8f9fa;">&nbsp;</td>
+    </tr>`;
+      }
+      
+      for (const task of ungroupedTasks) {
+        const startDate = task.start ? this.formatDateForCsv(task.start) : '';
+        const endDate = task.end ? this.formatDateForCsv(task.end) : '';
+        const url = task.ticketUrl || '';
+        const taskColor = task.color || '#ffffff';
+        
+        // Styling für abgeschlossene Tasks oder überfällige Tasks
+        const isCompleted = task.status === Status.DONE;
+        const isOverdue = this.isOverdue(task);
+        const taskTextColor = isCompleted ? '#6c757d' : '#000000'; // Grau für abgeschlossene Tasks
+        const endDateColor = isOverdue ? '#dc3545' : (isCompleted ? '#6c757d' : '#000000'); // Rot für überfällige, grau für abgeschlossene
+        
+        html += `
+    <tr style="background-color: ${taskColor}; color: ${taskTextColor};">
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${this.escapeHtml(task.title)}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${startDate}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px; color: ${endDateColor};">${endDate}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${url ? `<a href="${this.escapeHtml(url)}" target="_blank" style="color: ${taskTextColor};">${this.escapeHtml(url)}</a>` : ''}</td>
+    </tr>`;
+      }
+    }
+    
+    html += `
+  </tbody>
+</table>`;
+    
+    return html;
+  }
+
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  private stripHtmlTags(html: string): string {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+  }
+
+  // Toast-Benachrichtigungen
+  showToast(header: string, body: string, type: 'success' | 'error' | 'info' = 'info') {
+    const toast = {
+      header,
+      body,
+      classname: this.getToastClass(type),
+      icon: this.getToastIcon(type)
+    };
+    this.toasts.push(toast);
+  }
+
+  removeToast(toast: any) {
+    this.toasts = this.toasts.filter(t => t !== toast);
+  }
+
+  private getToastClass(type: string): string {
+    switch (type) {
+      case 'success': return 'bg-success text-light';
+      case 'error': return 'bg-danger text-light';
+      case 'info': return 'bg-info text-light';
+      default: return 'bg-light';
+    }
+  }
+
+  private getToastIcon(type: string): string {
+    switch (type) {
+      case 'success': return 'bi-check-circle-fill';
+      case 'error': return 'bi-exclamation-triangle-fill';
+      case 'info': return 'bi-info-circle-fill';
+      default: return 'bi-info-circle';
     }
   }
 }
