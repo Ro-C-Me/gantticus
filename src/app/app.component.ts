@@ -738,13 +738,13 @@ onGroupTitleClick(id: string) {
     const lines: string[] = [];
     
     // Header
-    lines.push('Name,Start,Ende,URL');
+    lines.push('Name,Status,Start,Ende,URL');
     
     // Gruppierte Tasks
     if (this.chart.groups && this.chart.groups.length > 0) {
       for (const group of this.chart.groups) {
         // Gruppe als eigene Zeile
-        lines.push(`"${group.title}","","",""`);
+        lines.push(`"${group.title}","","","",""`);
         
         // Tasks der Gruppe
         const groupTasks = this.chart.tasks.filter(task => task.group === group.id);
@@ -752,7 +752,8 @@ onGroupTitleClick(id: string) {
           const startDate = task.start ? this.formatDateForCsv(task.start) : '';
           const endDate = task.end ? this.formatDateForCsv(task.end) : '';
           const url = task.ticketUrl || '';
-          lines.push(`"${task.title}","${startDate}","${endDate}","${url}"`);
+          const statusLabel = this.getStatusLabel(task.status);
+          lines.push(`"${task.title}","${statusLabel}","${startDate}","${endDate}","${url}"`);
         }
       }
     }
@@ -769,7 +770,8 @@ onGroupTitleClick(id: string) {
         const startDate = task.start ? this.formatDateForCsv(task.start) : '';
         const endDate = task.end ? this.formatDateForCsv(task.end) : '';
         const url = task.ticketUrl || '';
-        lines.push(`"${task.title}","${startDate}","${endDate}","${url}"`);
+        const statusLabel = this.getStatusLabel(task.status);
+        lines.push(`"${task.title}","${statusLabel}","${startDate}","${endDate}","${url}"`);
       }
     }
     
@@ -784,12 +786,26 @@ onGroupTitleClick(id: string) {
     return `${day}.${month}.${year}`;
   }
 
+  private getStatusLabel(status: Status): string {
+    switch (status) {
+      case Status.OPEN:
+        return 'Open';
+      case Status.IN_PROGRESS:
+        return 'in progress';
+      case Status.DONE:
+        return 'Done';
+      default:
+        return 'Open';
+    }
+  }
+
   private generateHtmlTable(): string {
     let html = `
 <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; font-family: Arial, sans-serif;">
   <thead>
     <tr style="background-color: #f8f9fa; font-weight: bold;">
       <th style="border: 1px solid #dee2e6; padding: 8px;">Name</th>
+      <th style="border: 1px solid #dee2e6; padding: 8px;">Status</th>
       <th style="border: 1px solid #dee2e6; padding: 8px;">Start</th>
       <th style="border: 1px solid #dee2e6; padding: 8px;">Ende</th>
       <th style="border: 1px solid #dee2e6; padding: 8px;">URL</th>
@@ -806,7 +822,7 @@ onGroupTitleClick(id: string) {
         // Gruppe als verbundene Zeile
         html += `
     <tr style="background-color: ${groupColor}; font-weight: bold;">
-      <td colspan="4" style="border: 1px solid #dee2e6; padding: 8px; text-align: center;">
+      <td colspan="5" style="border: 1px solid #dee2e6; padding: 8px; text-align: center;">
         ${this.escapeHtml(group.title)}
       </td>
     </tr>`;
@@ -817,6 +833,7 @@ onGroupTitleClick(id: string) {
           const endDate = task.end ? this.formatDateForCsv(task.end) : '';
           const url = task.ticketUrl || '';
           const taskColor = task.color || '#ffffff';
+          const statusLabel = this.getStatusLabel(task.status);
           
           // Styling für abgeschlossene Tasks oder überfällige Tasks
           const isCompleted = task.status === Status.DONE;
@@ -827,6 +844,7 @@ onGroupTitleClick(id: string) {
           html += `
     <tr style="background-color: ${taskColor}; color: ${taskTextColor};">
       <td style="border: 1px solid #dee2e6; padding: 8px;">${this.escapeHtml(task.title)}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${statusLabel}</td>
       <td style="border: 1px solid #dee2e6; padding: 8px;">${startDate}</td>
       <td style="border: 1px solid #dee2e6; padding: 8px; color: ${endDateColor};">${endDate}</td>
       <td style="border: 1px solid #dee2e6; padding: 8px;">${url ? `<a href="${this.escapeHtml(url)}" target="_blank" style="color: ${taskTextColor};">${this.escapeHtml(url)}</a>` : ''}</td>
@@ -842,7 +860,7 @@ onGroupTitleClick(id: string) {
       if (this.chart.groups && this.chart.groups.length > 0) {
         html += `
     <tr>
-      <td colspan="4" style="border: 1px solid #dee2e6; padding: 4px; background-color: #f8f9fa;">&nbsp;</td>
+      <td colspan="5" style="border: 1px solid #dee2e6; padding: 4px; background-color: #f8f9fa;">&nbsp;</td>
     </tr>`;
       }
       
@@ -851,6 +869,7 @@ onGroupTitleClick(id: string) {
         const endDate = task.end ? this.formatDateForCsv(task.end) : '';
         const url = task.ticketUrl || '';
         const taskColor = task.color || '#ffffff';
+        const statusLabel = this.getStatusLabel(task.status);
         
         // Styling für abgeschlossene Tasks oder überfällige Tasks
         const isCompleted = task.status === Status.DONE;
@@ -861,6 +880,7 @@ onGroupTitleClick(id: string) {
         html += `
     <tr style="background-color: ${taskColor}; color: ${taskTextColor};">
       <td style="border: 1px solid #dee2e6; padding: 8px;">${this.escapeHtml(task.title)}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${statusLabel}</td>
       <td style="border: 1px solid #dee2e6; padding: 8px;">${startDate}</td>
       <td style="border: 1px solid #dee2e6; padding: 8px; color: ${endDateColor};">${endDate}</td>
       <td style="border: 1px solid #dee2e6; padding: 8px;">${url ? `<a href="${this.escapeHtml(url)}" target="_blank" style="color: ${taskTextColor};">${this.escapeHtml(url)}</a>` : ''}</td>
