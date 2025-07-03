@@ -107,7 +107,7 @@
       <button class="btn btn-outline-danger me-2" (click)="onDeleteChart(chart)">
         <i class="bi bi-trash"></i> Löschen
       </button>
-      <button class="btn btn-primary me-2" (click)="onSave()">
+      <button class="btn btn-primary me-2" (click)="onSave()" [disabled]="!hasUnsavedChanges">
         <i class="bi bi-save"></i> Speichern
       </button>
       
