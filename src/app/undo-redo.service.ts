@@ -12,9 +12,13 @@ export class UndoRedoService {
   private redoStack: string[] = [];
   private maxStackSize = 50;
   
+  // Tracking für ungespeicherte Änderungen
+  private lastSavedStateIndex: number = -1;
+  
   // BehaviorSubjects für die Steuerung der UI-Elemente (Aktivierung/Deaktivierung)
   private canUndoSubject = new BehaviorSubject<boolean>(false);
   private canRedoSubject = new BehaviorSubject<boolean>(false);
+  private hasUnsavedChangesSubject = new BehaviorSubject<boolean>(false);
   
   // Für debounced Save
   private debouncedSaveSubject = new Subject<Chart>();
@@ -22,6 +26,7 @@ export class UndoRedoService {
   
   canUndo$ = this.canUndoSubject.asObservable();
   canRedo$ = this.canRedoSubject.asObservable();
+  hasUnsavedChanges$ = this.hasUnsavedChangesSubject.asObservable();
 
   constructor() {
     // Debounced Save-Mechanismus einrichten
@@ -56,9 +61,17 @@ export class UndoRedoService {
     if (this.undoStack.length > this.maxStackSize) {
       // Ältesten Zustand entfernen
       this.undoStack.shift();
+      // lastSavedStateIndex anpassen, falls er betroffen ist
+      if (this.lastSavedStateIndex >= 0) {
+        this.lastSavedStateIndex--;
+        if (this.lastSavedStateIndex < 0) {
+          this.lastSavedStateIndex = -1; // Gespeicherter Zustand ist nicht mehr im Stack
+        }
+      }
     }
     
     this.updateCanUndo();
+    this.updateHasUnsavedChanges();
   }
 
   /**
@@ -87,6 +100,7 @@ export class UndoRedoService {
     // Status-Änderungen in Observables
     this.updateCanUndo();
     this.updateCanRedo();
+    this.updateHasUnsavedChanges();
     
     // Chart aus dem serialisierten Zustand wiederherstellen
     return ChartSerialization.deserialize(newCurrentState) || null;
@@ -115,6 +129,7 @@ export class UndoRedoService {
     // Status-Änderungen in Observables
     this.updateCanUndo();
     this.updateCanRedo();
+    this.updateHasUnsavedChanges();
     
     // Chart aus dem serialisierten Zustand wiederherstellen
     return ChartSerialization.deserialize(nextState) || null;
@@ -126,8 +141,10 @@ export class UndoRedoService {
   clearHistory(): void {
     this.undoStack = [];
     this.redoStack = [];
+    this.lastSavedStateIndex = -1; // Reset des gespeicherten Index
     this.updateCanUndo();
     this.updateCanRedo();
+    this.updateHasUnsavedChanges();
   }
 
   /**
@@ -136,6 +153,7 @@ export class UndoRedoService {
   initStateForChart(chart: Chart): void {
     this.clearHistory();
     this.saveState(chart);
+    this.markAsSaved(); // Neuer/geladener Chart ist als gespeichert zu betrachten
   }
 
   /**
@@ -147,11 +165,25 @@ export class UndoRedoService {
     this.debouncedSaveSubject.next(chart);
   }
 
+  /**
+   * Markiert den aktuellen Zustand als gespeichert
+   */
+  markAsSaved(): void {
+    this.lastSavedStateIndex = this.undoStack.length - 1;
+    this.updateHasUnsavedChanges();
+  }
+
   private updateCanUndo(): void {
     this.canUndoSubject.next(this.undoStack.length > 1);
   }
   
   private updateCanRedo(): void {
     this.canRedoSubject.next(this.redoStack.length > 0);
+  }
+
+  private updateHasUnsavedChanges(): void {
+    const currentIndex = this.undoStack.length - 1;
+    const hasUnsavedChanges = this.lastSavedStateIndex !== currentIndex;
+    this.hasUnsavedChangesSubject.next(hasUnsavedChanges);
   }
 }

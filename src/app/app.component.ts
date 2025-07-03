@@ -160,6 +160,7 @@ availableCharts: {
   // Properties für Undo/Redo
   canUndo = false;
   canRedo = false;
+  hasUnsavedChanges = false;
   
   constructor(
     private modalService: NgbModal, 
@@ -174,6 +175,7 @@ availableCharts: {
     // Status der Undo/Redo-Buttons abonnieren
     this.undoRedoService.canUndo$.subscribe(can => this.canUndo = can);
     this.undoRedoService.canRedo$.subscribe(can => this.canRedo = can);
+    this.undoRedoService.hasUnsavedChanges$.subscribe(has => this.hasUnsavedChanges = has);
   }
 
   ngOnInit() {
@@ -641,6 +643,7 @@ onGroupTitleClick(id: string) {
   onSave() {
     console.log("Start saving");
     this.chartStorage.saveChart(this.chart);
+    this.undoRedoService.markAsSaved(); // Markiere als gespeichert
     console.log("Finished saving");
   }
     
