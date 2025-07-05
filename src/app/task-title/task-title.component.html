@@ -1,9 +1,9 @@
-<!-- task-title.component.html -->
-<div (mouseenter)="showIcons = true" (mouseleave)="showIcons = false">
-    <a *ngIf="hasUrl()" target="_blank" [href]="getUrl()" rel="noopener" [title]="getUrl()" (click)="$event.stopPropagation()">
-      {{ item.title }}
-    </a>
-    <span *ngIf="!hasUrl()">{{ item.title }}</span>
-    <i *ngIf="showIcons" class="bi bi-trash text-danger" style="margin-left: 0.5rem;" (click)="onDeleteClick()"></i>
- 
+<div class="task-title-container">
+  <a *ngIf="hasUrl()" target="_blank" [href]="getUrl()" rel="noopener" [title]="getUrl()" (click)="$event.stopPropagation()">
+    {{ item.title }}
+  </a>
+  <span *ngIf="!hasUrl()">{{ item.title }}</span>
+  <div class="task-action-overlay">
+    <i class="bi bi-trash" (click)="onDeleteClick()"></i>
   </div>
+</div>

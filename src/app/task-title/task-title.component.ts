@@ -35,8 +35,6 @@ export class TaskTitleComponent {
   @Input() item!: GanttItem;
   @Output() deleted = new EventEmitter<GanttItem>();
 
-  showIcons = false;
-
   onDeleteClick() {
     this.deleted.emit(this.item);
   

@@ -1,0 +1,28 @@
+.task-action-overlay {
+  position: absolute;
+  right: 0; /* oder right: 0 für ganz rechts */
+  top: 0;
+  height: 100%;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  background: transparent; /* Overlay bleibt transparent */
+}
+
+.task-title-container:hover .task-action-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Weißer Hintergrund und Padding für das Icon */
+.task-action-overlay i {
+  background: #f00;
+  color: #fff;
+  padding: 0px 10px 0px 10px;
+    border-radius: 20%; /* Optional: abgerundete Ecken */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06); /* Optional: leichter Schatten */
+  cursor: pointer;
+}
