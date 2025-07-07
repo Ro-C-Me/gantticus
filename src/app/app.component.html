@@ -144,6 +144,7 @@
 (selectedChange)="onSelect($event)"
 (barClick)="barClick($event)"
 [quickTimeFocus]="true"
+[maxLevel]="maxHierarchyLevel"
 >
   <ngx-gantt-table [draggable]="true" (dragDropped)="onRowDragDropped($event)">
     <ngx-gantt-column name="Title" width="200px">
