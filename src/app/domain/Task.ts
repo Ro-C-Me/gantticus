@@ -75,6 +75,9 @@ export class Task {
 
     @jsonMember
     group?: string;
+
+    @jsonArrayMember(String)
+    children: string[] = [];
   }
 
 

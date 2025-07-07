@@ -45,7 +45,7 @@ registerLocaleData(localeEn, 'en');
           lineType: GanttLinkLineType.curve
         },
         styleOptions: {
-          lineHeight: 25,
+          lineHeight: 20,
           barHeight: 15
         }
       },

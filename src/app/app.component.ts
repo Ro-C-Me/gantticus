@@ -238,6 +238,9 @@ availableCharts: {
     task2.computedStart = task2.start ? task2.start : new Date();
     task2.computedEnd = task2.end ? task2.end : new Date();
 
+    // Sub-Task Konfiguration: task2 wird ein Child von task1
+    task1.children = [task2.id];
+
     let task3 = new Task();
     task3.id = '000003';
     task3.title = 'Task 3';
@@ -477,40 +480,96 @@ onGroupTitleClick(id: string) {
           console.error("No task to move with id " + id);
           return;
         }
-        else {
-          
-          let targetIndex = this.chart.tasks.findIndex(t => t.id == $event.target.id);
-          if (targetIndex == -1) {
-            console.error("No task to insert before / after with id " + id);
-            return;
-          }
 
-          if (!$event.target.origin) {
-            console.error("origin not set!");
-            return;
-          }
-          else if (!($event.target.origin instanceof Task)){
-            console.error("origin is no Task!");
-            return;
-          }
-          else        if (taskToMove.group != $event.target.origin.group) {
-            console.log("group changed by drag&drop from " + taskToMove.group + " to " + $event.target.origin.group);
-            taskToMove.group = $event.target.origin.group;
-          }
-
-          // Erst alle Änderungen durchführen
-          if ($event.dropPosition == "after") {
-            targetIndex++;
-          }
-          this.chart.tasks.splice(this.chart.tasks.indexOf(taskToMove), 1);
-          this.chart.tasks.splice(targetIndex, 0, taskToMove);
-          
-          // Dann den Zustand für Undo speichern
-          this.saveStateForUndo();
+        // Sub-Task-Logik: Prüfen ob der Task in einen anderen Task (Parent) gedroppt wird
+        if ($event.targetParent && $event.targetParent.id) {
+          console.log("Task wird zu Sub-Task von " + $event.targetParent.id);
+          this.handleSubTaskCreation(taskToMove, $event.targetParent.id, $event.target.id, $event.dropPosition);
+        } else {
+          // Normales Drag & Drop ohne Sub-Task-Erstellung
+          this.handleNormalDragDrop(taskToMove, $event);
         }
 
+        // Zustand für Undo speichern und UI aktualisieren
+        this.saveStateForUndo();
         this.updateGanttItems();
       }
+
+    private handleSubTaskCreation(taskToMove: Task, parentId: string, targetId: string, dropPosition: string) {
+      const parentTask = this.getTaskById(parentId);
+      if (!parentTask) {
+        console.error("Parent task not found: " + parentId);
+        return;
+      }
+
+      // Task aus bestehender Parent-Beziehung entfernen
+      this.removeTaskFromParent(taskToMove.id);
+
+      // Task zum neuen Parent hinzufügen
+      if (!parentTask.children) {
+        parentTask.children = [];
+      }
+
+      // Position innerhalb der Children bestimmen
+      const targetIndex = parentTask.children.findIndex(childId => childId === targetId);
+      if (targetIndex === -1) {
+        // Ziel-Task ist nicht in den Children, einfach anhängen
+        parentTask.children.push(taskToMove.id);
+      } else {
+        // Ziel-Task gefunden, an der richtigen Position einfügen
+        const insertIndex = dropPosition === "after" ? targetIndex + 1 : targetIndex;
+        parentTask.children.splice(insertIndex, 0, taskToMove.id);
+      }
+
+      // Gruppe des Sub-Tasks entfernen, da Sub-Tasks keine eigene Gruppe haben
+      // Die Gruppenzugehörigkeit wird durch den Parent-Task bestimmt
+      taskToMove.group = undefined;
+
+      console.log("Sub-Task erstellt:", taskToMove.id, "→", parentId, "(Gruppe entfernt)");
+    }
+
+    private handleNormalDragDrop(taskToMove: Task, $event: GanttTableDragDroppedEvent<unknown>) {
+      // Task wurde aus Parent herausgezogen - zu Top-Level machen
+      this.removeTaskFromParent(taskToMove.id);
+
+      let targetIndex = this.chart.tasks.findIndex(t => t.id == $event.target.id);
+      if (targetIndex == -1) {
+        console.error("No task to insert before / after with id " + $event.target.id);
+        return;
+      }
+
+      if (!$event.target.origin) {
+        console.error("origin not set!");
+        return;
+      }
+      else if (!($event.target.origin instanceof Task)){
+        console.error("origin is no Task!");
+        return;
+      }
+      else if (taskToMove.group != $event.target.origin.group) {
+        console.log("group changed by drag&drop from " + taskToMove.group + " to " + $event.target.origin.group);
+        taskToMove.group = $event.target.origin.group;
+      }
+
+      // Reihenfolge in der Task-Liste anpassen
+      if ($event.dropPosition == "after") {
+        targetIndex++;
+      }
+      this.chart.tasks.splice(this.chart.tasks.indexOf(taskToMove), 1);
+      this.chart.tasks.splice(targetIndex, 0, taskToMove);
+
+      console.log("Task zu Top-Level gemacht:", taskToMove.id);
+    }
+
+    private removeTaskFromParent(taskId: string) {
+      // Task aus dem Parent-Children-Array entfernen
+      // Normalerweise gibt es nur einen Parent, aber wir prüfen alle für Robustheit
+      this.chart.tasks.forEach(task => {
+        if (task.children && task.children.includes(taskId)) {
+          task.children = task.children.filter(childId => childId !== taskId);
+        }
+      });
+    }
 
 
 
@@ -552,7 +611,15 @@ onGroupTitleClick(id: string) {
 
   updateGanttItems() {
     let itemById = new Map<string, GanttItem>();
+    let childTaskIds = new Set<string>();
     let requiresDefaultGroup = false;
+
+    // Erst alle Child-Task-IDs sammeln
+    this.chart.tasks.forEach(t => {
+      if (t.children && t.children.length > 0) {
+        t.children.forEach(childId => childTaskIds.add(childId));
+      }
+    });
 
     this.items = [];
 
@@ -579,8 +646,24 @@ onGroupTitleClick(id: string) {
       if (t.milestone) {
         item.type = GanttItemType.milestone;
       }
-      this.items.push(item);
+      
+      // Nur Top-Level-Tasks (nicht als Children definierte Tasks) zum items Array hinzufügen
+      if (!childTaskIds.has(t.id)) {
+        this.items.push(item);
+      }
       itemById.set(t.id, item);
+    });
+
+    // Sub-Tasks (children) zuweisen - nach dem alle Items erstellt sind
+    this.chart.tasks.forEach(t => {
+      if (t.children && t.children.length > 0) {
+        const parentItem = itemById.get(t.id);
+        if (parentItem) {
+          parentItem.children = t.children
+            .map(childId => itemById.get(childId))
+            .filter(child => child !== undefined) as GanttItem[];
+        }
+      }
     });
 
     this.chart.tasks.forEach(t => {
