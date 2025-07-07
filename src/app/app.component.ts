@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef, OnInit, HostListener } from '@angular/core';
-import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent, GanttBarClickEvent } from '@worktile/gantt';
+import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent, GanttBarClickEvent, GanttItemType } from '@worktile/gantt';
 import { Dependency, DependencyType, Group, Status, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
@@ -575,6 +575,10 @@ onGroupTitleClick(id: string) {
         item.group_id = Group.DEFAULT_GROUP_ID;
       }
       item.draggable = !t.scheduleFinalized;
+      // Meilenstein-Flag vom Task auf das GanttItem übertragen
+      if (t.milestone) {
+        item.type = GanttItemType.milestone;
+      }
       this.items.push(item);
       itemById.set(t.id, item);
     });
@@ -590,7 +594,7 @@ onGroupTitleClick(id: string) {
           }
           itemById.get(d.taskId)!.links?.push(createGanttLink(t.id, d.type));
         }
-     }) 
+     })
     });
     console.log("this.items: ");
     console.log(this.items);
