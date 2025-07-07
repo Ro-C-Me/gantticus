@@ -146,7 +146,15 @@
 [quickTimeFocus]="true"
 >
   <ngx-gantt-table [draggable]="true" (dragDropped)="onRowDragDropped($event)">
-    <ngx-gantt-column name="Status" width="100px">
+    <ngx-gantt-column name="Title" width="200px">
+      <ng-template #cell let-item="item"> 
+        <app-task-title 
+        [item]="item"
+        (deleted)="onTaskDelete(item.id)"
+      ></app-task-title>
+      </ng-template>
+    </ngx-gantt-column>
+        <ngx-gantt-column name="Status" width="100px">
       <ng-template #cell let-item="item"> 
         <app-task-status 
           [(status)]="item.origin.status"
@@ -155,14 +163,6 @@
           [(progress)]="item.origin.progress"
           [chart]="chart"
         ></app-task-status>
-      </ng-template>
-    </ngx-gantt-column>
-    <ngx-gantt-column name="Title" width="200px">
-      <ng-template #cell let-item="item"> 
-        <app-task-title 
-        [item]="item"
-        (deleted)="onTaskDelete(item.id)"
-      ></app-task-title>
       </ng-template>
     </ngx-gantt-column>
     <ngx-gantt-column name="Begin" width="100px">
