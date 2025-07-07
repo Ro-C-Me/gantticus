@@ -21,6 +21,9 @@ export class AppComponent implements OnInit {
   // Toast-Benachrichtigungen
   toasts: any[] = [];
 
+  // Maximale Tiefe der Sub-Task-Hierarchie (konfigurierbar)
+  maxHierarchyLevel: number = 5;
+
   isOverdue(task: Task) : boolean{
     if (!task.end) {
       return false;
@@ -482,8 +485,9 @@ onGroupTitleClick(id: string) {
         }
 
         // Sub-Task-Logik: Prüfen ob der Task in einen anderen Task (Parent) gedroppt wird
-        if ($event.targetParent && $event.targetParent.id) {
-          console.log("Task wird zu Sub-Task von " + $event.targetParent.id);
+        if ($event.dropPosition === 'inside') {
+          this.handleSubTaskCreation(taskToMove, $event.target.id, $event.target.id, "after");
+        } else if ($event.targetParent && $event.targetParent.id) {
           this.handleSubTaskCreation(taskToMove, $event.targetParent.id, $event.target.id, $event.dropPosition);
         } else {
           // Normales Drag & Drop ohne Sub-Task-Erstellung
