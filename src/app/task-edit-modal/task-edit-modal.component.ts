@@ -46,6 +46,7 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
       end: [this.toNgbDate(this.task.end), Validators.required],
       milestone: [this.task.milestone],
       scheduleFinalized: [this.task.scheduleFinalized],
+      computeFromChildren: [this.task.computeFromChildren],
       useColor: [this.task.color],
       color: [{ value: this.task.color || '#6698FF', disabled: !this.task.color }],
       progress: [this.task.progress * 100, [Validators.required, Validators.min(0), Validators.max(100)]]
@@ -63,7 +64,41 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
       }
     });
 
+    this.taskForm.get('computeFromChildren')?.valueChanges.subscribe(computeFromChildren => {
+      const startControl = this.taskForm.get('start');
+      const endControl = this.taskForm.get('end');
+      if (computeFromChildren) {
+        startControl?.setValue(null);
+        endControl?.setValue(null);
+        startControl?.disable();
+        endControl?.disable();
+        startControl?.clearValidators();
+        endControl?.clearValidators();
+      } else {
+        startControl?.enable();
+        endControl?.enable();
+        startControl?.setValidators(Validators.required);
+        endControl?.setValidators(Validators.required);
+      }
+      startControl?.updateValueAndValidity();
+      endControl?.updateValueAndValidity();
+    });
+
     this.dependencies = [...this.task.dependencies];
+
+    // Initial state für computeFromChildren setzen
+    if (this.task.computeFromChildren) {
+      const startControl = this.taskForm.get('start');
+      const endControl = this.taskForm.get('end');
+      startControl?.setValue(null);
+      endControl?.setValue(null);
+      startControl?.disable();
+      endControl?.disable();
+      startControl?.clearValidators();
+      endControl?.clearValidators();
+      startControl?.updateValueAndValidity();
+      endControl?.updateValueAndValidity();
+    }
   }
 
   ngAfterViewInit() {
@@ -110,17 +145,28 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
       this.taskForm.markAllAsTouched();
       return;
     }
-    if (!this.isEndAfterStart()) {
-      alert('Das Enddatum muss nach dem Startdatum liegen.');
-      return;
+    
+    // Validierung der Start/End-Logik
+    if (!this.taskForm.value.computeFromChildren && !this.isEndAfterStart()) {
+        alert('Das Enddatum muss nach dem Startdatum liegen.');
+        return;
     }
+    
     // Änderungen übernehmen
     this.task.title = this.taskForm.value.title;
     this.task.ticketUrl = this.taskForm.value.ticketUrl;
-    this.task.start = this.fromNgbDate(this.taskForm.value.start)!;
-    this.task.end = this.fromNgbDate(this.taskForm.value.end)!;
+    
+    if (!this.taskForm.value.computeFromChildren) {
+      this.task.start = this.fromNgbDate(this.taskForm.value.start)!;
+      this.task.end = this.fromNgbDate(this.taskForm.value.end)!;
+    } else {
+      this.task.start = undefined;
+      this.task.end = undefined;
+    }
+    
     this.task.milestone = this.taskForm.value.milestone;
     this.task.scheduleFinalized = this.taskForm.value.scheduleFinalized;
+    this.task.computeFromChildren = this.taskForm.value.computeFromChildren;
     this.task.progress = this.taskForm.value.progress / 100.0;
     this.task.dependencies = this.dependencies;
     
