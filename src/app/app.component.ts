@@ -843,6 +843,7 @@ onGroupTitleClick(id: string) {
 
   private generateCsvContent(): string {
     const lines: string[] = [];
+    const processedTasks = new Set<string>();
     
     // Header
     lines.push('Name,Status,Start,Ende,URL');
@@ -853,20 +854,22 @@ onGroupTitleClick(id: string) {
         // Gruppe als eigene Zeile
         lines.push(`"${group.title}","","","",""`);
         
-        // Tasks der Gruppe
-        const groupTasks = this.chart.tasks.filter(task => task.group === group.id);
+        // Top-Level Tasks der Gruppe (ohne Parent)
+        const groupTasks = this.chart.tasks.filter(task => 
+          task.group === group.id && !this.isSubTask(task.id)
+        );
+        
         for (const task of groupTasks) {
-          const startDate = task.start ? this.formatDateForCsv(task.start) : '';
-          const endDate = task.end ? this.formatDateForCsv(task.end) : '';
-          const url = task.ticketUrl || '';
-          const statusLabel = this.getStatusLabel(task.status);
-          lines.push(`"${task.title}","${statusLabel}","${startDate}","${endDate}","${url}"`);
+          this.addTaskToCsv(task, lines, processedTasks, '');
         }
       }
     }
     
-    // Tasks ohne Gruppe
-    const ungroupedTasks = this.chart.tasks.filter(task => !task.group || task.group === '');
+    // Tasks ohne Gruppe (Top-Level)
+    const ungroupedTasks = this.chart.tasks.filter(task => 
+      (!task.group || task.group === '') && !this.isSubTask(task.id)
+    );
+    
     if (ungroupedTasks.length > 0) {
       // Leerzeile vor ungroupierten Tasks (falls es Gruppen gibt)
       if (this.chart.groups && this.chart.groups.length > 0) {
@@ -874,15 +877,41 @@ onGroupTitleClick(id: string) {
       }
       
       for (const task of ungroupedTasks) {
-        const startDate = task.start ? this.formatDateForCsv(task.start) : '';
-        const endDate = task.end ? this.formatDateForCsv(task.end) : '';
-        const url = task.ticketUrl || '';
-        const statusLabel = this.getStatusLabel(task.status);
-        lines.push(`"${task.title}","${statusLabel}","${startDate}","${endDate}","${url}"`);
+        this.addTaskToCsv(task, lines, processedTasks, '');
       }
     }
     
     return lines.join('\n');
+  }
+
+  private addTaskToCsv(task: Task, lines: string[], processedTasks: Set<string>, indent: string): void {
+    if (processedTasks.has(task.id)) return;
+    processedTasks.add(task.id);
+    
+    const startDate = task.start ? this.formatDateForCsv(task.start) : '';
+    const endDate = task.end ? this.formatDateForCsv(task.end) : '';
+    const url = task.ticketUrl || '';
+    const statusLabel = this.getStatusLabel(task.status);
+    const taskTitle = indent + task.title;
+    
+    lines.push(`"${taskTitle}","${statusLabel}","${startDate}","${endDate}","${url}"`);
+    
+    // Sub-Tasks hinzufügen
+    if (task.children && task.children.length > 0) {
+      const childIndent = indent + '  └─ ';
+      for (const childId of task.children) {
+        const childTask = this.getTaskById(childId);
+        if (childTask) {
+          this.addTaskToCsv(childTask, lines, processedTasks, childIndent);
+        }
+      }
+    }
+  }
+
+  private isSubTask(taskId: string): boolean {
+    return this.chart.tasks.some(task => 
+      task.children && task.children.includes(taskId)
+    );
   }
 
   private formatDateForCsv(date: Date): string {
@@ -920,10 +949,11 @@ onGroupTitleClick(id: string) {
   </thead>
   <tbody>`;
 
+    const processedTasks = new Set<string>();
+
     // Gruppierte Tasks
     if (this.chart.groups && this.chart.groups.length > 0) {
       for (const group of this.chart.groups) {
-        const groupTasks = this.chart.tasks.filter(task => task.group === group.id);
         const groupColor = group.color || '#e9ecef';
         
         // Gruppe als verbundene Zeile
@@ -934,34 +964,22 @@ onGroupTitleClick(id: string) {
       </td>
     </tr>`;
         
-        // Tasks der Gruppe
+        // Top-Level Tasks der Gruppe (ohne Parent)
+        const groupTasks = this.chart.tasks.filter(task => 
+          task.group === group.id && !this.isSubTask(task.id)
+        );
+        
         for (const task of groupTasks) {
-          const startDate = task.start ? this.formatDateForCsv(task.start) : '';
-          const endDate = task.end ? this.formatDateForCsv(task.end) : '';
-          const url = task.ticketUrl || '';
-          const taskColor = task.color || '#ffffff';
-          const statusLabel = this.getStatusLabel(task.status);
-          
-          // Styling für abgeschlossene Tasks oder überfällige Tasks
-          const isCompleted = task.status === Status.DONE;
-          const isOverdue = this.isOverdue(task);
-          const taskTextColor = isCompleted ? '#6c757d' : '#000000'; // Grau für abgeschlossene Tasks
-          const endDateColor = isOverdue ? 'red' : (isCompleted ? '#6c757d' : '#000000'); // Rot für überfällige, grau für abgeschlossene
-          
-          html += `
-    <tr style="background-color: ${taskColor}; color: ${taskTextColor};">
-      <td style="border: 1px solid #dee2e6; padding: 8px;">${this.escapeHtml(task.title)}</td>
-      <td style="border: 1px solid #dee2e6; padding: 8px;">${statusLabel}</td>
-      <td style="border: 1px solid #dee2e6; padding: 8px;">${startDate}</td>
-      <td style="border: 1px solid #dee2e6; padding: 8px; color: ${endDateColor};">${endDate}</td>
-      <td style="border: 1px solid #dee2e6; padding: 8px;">${url ? `<a href="${this.escapeHtml(url)}" target="_blank" style="color: ${taskTextColor};">${this.escapeHtml(url)}</a>` : ''}</td>
-    </tr>`;
+          html += this.addTaskToHtml(task, processedTasks, '');
         }
       }
     }
     
-    // Tasks ohne Gruppe
-    const ungroupedTasks = this.chart.tasks.filter(task => !task.group || task.group === '');
+    // Tasks ohne Gruppe (Top-Level)
+    const ungroupedTasks = this.chart.tasks.filter(task => 
+      (!task.group || task.group === '') && !this.isSubTask(task.id)
+    );
+    
     if (ungroupedTasks.length > 0) {
       // Trennzeile falls es Gruppen gibt
       if (this.chart.groups && this.chart.groups.length > 0) {
@@ -972,32 +990,53 @@ onGroupTitleClick(id: string) {
       }
       
       for (const task of ungroupedTasks) {
-        const startDate = task.start ? this.formatDateForCsv(task.start) : '';
-        const endDate = task.end ? this.formatDateForCsv(task.end) : '';
-        const url = task.ticketUrl || '';
-        const taskColor = task.color || '#ffffff';
-        const statusLabel = this.getStatusLabel(task.status);
-        
-        // Styling für abgeschlossene Tasks oder überfällige Tasks
-        const isCompleted = task.status === Status.DONE;
-        const isOverdue = this.isOverdue(task);
-        const taskTextColor = isCompleted ? '#6c757d' : '#000000'; // Grau für abgeschlossene Tasks
-        const endDateColor = isOverdue ? '#dc3545' : (isCompleted ? '#6c757d' : '#000000'); // Rot für überfällige, grau für abgeschlossene
-        
-        html += `
-    <tr style="background-color: ${taskColor}; color: ${taskTextColor};">
-      <td style="border: 1px solid #dee2e6; padding: 8px;">${this.escapeHtml(task.title)}</td>
-      <td style="border: 1px solid #dee2e6; padding: 8px;">${statusLabel}</td>
-      <td style="border: 1px solid #dee2e6; padding: 8px;">${startDate}</td>
-      <td style="border: 1px solid #dee2e6; padding: 8px; color: ${endDateColor};">${endDate}</td>
-      <td style="border: 1px solid #dee2e6; padding: 8px;">${url ? `<a href="${this.escapeHtml(url)}" target="_blank" style="color: ${taskTextColor};">${this.escapeHtml(url)}</a>` : ''}</td>
-    </tr>`;
+        html += this.addTaskToHtml(task, processedTasks, '');
       }
     }
     
     html += `
   </tbody>
 </table>`;
+    
+    return html;
+  }
+
+  private addTaskToHtml(task: Task, processedTasks: Set<string>, indent: string): string {
+    if (processedTasks.has(task.id)) return '';
+    processedTasks.add(task.id);
+    
+    const startDate = task.start ? this.formatDateForCsv(task.start) : '';
+    const endDate = task.end ? this.formatDateForCsv(task.end) : '';
+    const url = task.ticketUrl || '';
+    const taskColor = task.color || '#ffffff';
+    const statusLabel = this.getStatusLabel(task.status);
+    const taskTitle = indent + task.title;
+    
+    // Styling für abgeschlossene Tasks oder überfällige Tasks
+    const isCompleted = task.status === Status.DONE;
+    const isOverdue = this.isOverdue(task);
+    const taskTextColor = isCompleted ? '#6c757d' : '#000000';
+    const endDateColor = isOverdue ? '#dc3545' : (isCompleted ? '#6c757d' : '#000000');
+    
+    let html = `
+    <tr style="background-color: ${taskColor}; color: ${taskTextColor};">
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${this.escapeHtml(taskTitle)}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${statusLabel}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${startDate}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px; color: ${endDateColor};">${endDate}</td>
+      <td style="border: 1px solid #dee2e6; padding: 8px;">${url ? `<a href="${this.escapeHtml(url)}" target="_blank" style="color: ${taskTextColor};">${this.escapeHtml(url)}</a>` : ''}</td>
+    </tr>`;
+    
+    // Sub-Tasks hinzufügen
+    if (task.children && task.children.length > 0) {
+      const childIndent = indent + '&nbsp;&nbsp;└─&nbsp;';
+      for (const childId of task.children) {
+        const childTask = this.getTaskById(childId);
+        if (childTask) {
+          html += this.addTaskToHtml(childTask, processedTasks, childIndent);
+        }
+      }
+    }
     
     return html;
   }
