@@ -47,6 +47,9 @@ export class Task {
     scheduleFinalized: boolean = false;
 
     @jsonMember
+    computeFromChildren: boolean = false;
+
+    @jsonMember
     computedStart? : Date;
 
     @jsonMember

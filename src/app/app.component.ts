@@ -213,25 +213,41 @@ availableCharts: {
   }
   
   private initializeExampleTasksAndGroups(): void {
+    let dependencies: Dependency[] = [];
+
     let task0 = new Task();
     task0.id = '000000';
     task0.title = 'Task 0';
     task0.start = new Date("2025-05-06");
     task0.end = new Date("2025-05-08");
     this.chart.tasks.push(task0);
-
     task0.computedStart = task0.start ? task0.start : new Date();
     task0.computedEnd = task0.end ? task0.end : new Date();
+    let dependency0 = new Dependency();
+    dependency0.taskId = task0.id;
+    dependencies.push(dependency0);
     
     let task1 = new Task();
     task1.id = '000001';
     task1.title = 'Task 1';
-    task1.start = new Date("2025-05-05");
-    task1.end = new Date("2025-05-09");
-    this.chart.tasks.push(task1);
+    task1.computeFromChildren = true;
     task1.computedStart = task1.start ? task1.start : new Date();
     task1.computedEnd = task1.end ? task1.end : new Date();
-    
+    this.chart.tasks.push(task1);
+
+    let task1_1 = new Task();
+    task1_1.id = '000001_1';
+    task1_1.title = 'Task 1.1';
+    task1_1.start = new Date("2025-05-05");
+    task1_1.end = new Date("2025-05-09");
+    this.chart.tasks.push(task1_1);
+    task1_1.computedStart = task1_1.start;
+    task1_1.computedEnd = task1_1.end;
+    let dependency1 = new Dependency();
+    dependency1.taskId = task1_1.id;
+    dependencies.push(dependency1);
+    task1.children.push(task1_1.id);
+
     let task2 = new Task();
     task2.id = '000002';
     task2.title = 'Task 2';
@@ -240,9 +256,6 @@ availableCharts: {
     this.chart.tasks.push(task2);
     task2.computedStart = task2.start ? task2.start : new Date();
     task2.computedEnd = task2.end ? task2.end : new Date();
-
-    // Sub-Task Konfiguration: task2 wird ein Child von task1
-    task1.children = [task2.id];
 
     let task3 = new Task();
     task3.id = '000003';
@@ -253,12 +266,16 @@ availableCharts: {
     this.chart.tasks.push(task3);
     task3.computedStart = task3.start ? task3.start : new Date();
     task3.computedEnd = task3.end ? task3.end : new Date();
-
+    task3.dependencies = dependencies;
+    console.log("DEPENDENCIES", task3.dependencies);
     let group0 = new Group();
     group0.id = 'group0';
     group0.title = 'Group 0';
     this.chart.groups.push(group0);
     
+    let dependency1_1_from_2 = new Dependency();
+    dependency1_1_from_2.taskId = task2.id;
+    task1_1.dependencies.push(dependency1_1_from_2);
     let task4 = new Task();
     task4.id = '000004';
     task4.title = 'Task 4';
@@ -270,16 +287,6 @@ availableCharts: {
     task4.computedEnd = task4.end ? task4.end : new Date();
     task4.group = group0.id;
     task4.scheduleFinalized = true;
-    
-
-    const dependency = new Dependency();
-    dependency.type = DependencyType.FS;
-    dependency.taskId = task1.id;
-
-    task0.dependencies = [dependency];
-    task2.dependencies = [dependency];
-    task3.dependencies = [dependency];
-    task4.dependencies = [dependency];
 
     this.updateGanttItems();
 
@@ -435,8 +442,8 @@ onGroupTitleClick(id: string) {
   }
 
   recomputeTasks(t: Task) {
-    t.computedStart = t.start ? t.start : new Date();;
-    t.computedEnd = t.end ? t.end : new Date();
+    t.computedStart = t.start;
+    t.computedEnd = t.end;
   }
     
     dragEnded($event: GanttDragEvent) {
@@ -631,8 +638,18 @@ onGroupTitleClick(id: string) {
       let item : GanttItem = {title : t.title, id : t.id}; 
       item.progress = t.progress;
       item.origin = t;
-      item.start = t.computedStart;
-      item.end = t.computedEnd;
+      
+      // Start und End berechnen basierend auf computeFromChildren
+      if (t.computeFromChildren && t.children && t.children.length > 0) {
+        const childTasks = t.children.map(childId => this.getTaskById(childId)).filter(child => child !== undefined) as Task[];
+        const computedDates = this.computeScheduleFromChildren(childTasks);
+        item.start = computedDates.start;
+        item.end = computedDates.end;
+      } else {
+        item.start = t.computedStart;
+        item.end = t.computedEnd;
+      }
+      
       if (t.color) {
         item.color = t.color;
       } else if (t.group &&  this.getGroupById(t.group)) {
@@ -645,13 +662,12 @@ onGroupTitleClick(id: string) {
         requiresDefaultGroup = true;
         item.group_id = Group.DEFAULT_GROUP_ID;
       }
-      item.draggable = !t.scheduleFinalized;
-      // Meilenstein-Flag vom Task auf das GanttItem übertragen
+      item.draggable = !t.scheduleFinalized && !t.computeFromChildren;
+
       if (t.milestone) {
         item.type = GanttItemType.milestone;
       }
       
-      // Nur Top-Level-Tasks (nicht als Children definierte Tasks) zum items Array hinzufügen
       if (!childTaskIds.has(t.id)) {
         this.items.push(item);
       }
@@ -996,6 +1012,25 @@ onGroupTitleClick(id: string) {
     const div = document.createElement('div');
     div.innerHTML = html;
     return div.textContent || div.innerText || '';
+  }
+
+  // Hilfsmethode: Berechnet Start/End-Zeiten aus Sub-Tasks
+  private computeScheduleFromChildren(childTasks: Task[]): { start?: Date, end?: Date } {
+    const validStarts = childTasks
+      .map(child => child.start || child.computedStart)
+      .filter(date => date !== undefined && date !== null) as Date[];
+    
+    const validEnds = childTasks
+      .map(child => child.end || child.computedEnd)
+      .filter(date => date !== undefined && date !== null) as Date[];
+    
+    const earliestStart = validStarts.length > 0 ? new Date(Math.min(...validStarts.map(d => d.getTime()))) : undefined;
+    const latestEnd = validEnds.length > 0 ? new Date(Math.max(...validEnds.map(d => d.getTime()))) : undefined;
+    
+    return {
+      start: earliestStart,
+      end: latestEnd
+    };
   }
 
   // Toast-Benachrichtigungen

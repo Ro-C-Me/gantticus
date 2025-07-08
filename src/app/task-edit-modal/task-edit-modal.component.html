@@ -41,14 +41,19 @@
       <label for="scheduleFinalized" class="form-check-label">Finalize schedule</label>
     </div>
 
+    <div class="form-check mb-3">
+      <input id="computeFromChildren" type="checkbox" class="form-check-input" formControlName="computeFromChildren" />
+      <label for="computeFromChildren" class="form-check-label">Compute from sub tasks</label>
+    </div>
+
     <h6>Zeitplanung</h6>
     <div class="row mb-3">
       <div class="col">
         <label for="start" class="form-label">von</label>
         <div class="d-flex"><input class="form-control" formControlName="start" name="dp" ngbDatepicker
-            #dStart="ngbDatepicker" [disabled]="taskForm.get('scheduleFinalized')?.value" />
+            #dStart="ngbDatepicker" [disabled]="taskForm.get('scheduleFinalized')?.value || taskForm.get('computeFromChildren')?.value" />
           <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dStart.toggle()" type="button"
-            [disabled]="taskForm.get('scheduleFinalized')?.value"></button>
+            [disabled]="taskForm.get('scheduleFinalized')?.value || taskForm.get('computeFromChildren')?.value"></button>
         </div>
         <div *ngIf="taskForm.get('start')?.invalid && taskForm.get('start')?.touched" class="text-danger">
           Startdatum ist erforderlich.
@@ -57,9 +62,9 @@
       <div class="col">
         <label for="end" class="form-label">bis</label>
         <div class="d-flex"><input class="form-control" formControlName="end" name="dp" ngbDatepicker
-            #dEnd="ngbDatepicker" [disabled]="taskForm.get('scheduleFinalized')?.value" />
+            #dEnd="ngbDatepicker" [disabled]="taskForm.get('scheduleFinalized')?.value || taskForm.get('computeFromChildren')?.value" />
           <button class="btn btn-outline-secondary bi bi-calendar3" (click)="dEnd.toggle()" type="button"
-            [disabled]="taskForm.get('scheduleFinalized')?.value"></button>
+            [disabled]="taskForm.get('scheduleFinalized')?.value || taskForm.get('computeFromChildren')?.value"></button>
         </div>
         <div *ngIf="taskForm.get('end')?.invalid && taskForm.get('end')?.touched" class="text-danger">
           Enddatum ist erforderlich.
