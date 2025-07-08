@@ -47,10 +47,10 @@ export class Task {
     scheduleFinalized: boolean = false;
 
     @jsonMember
-    computedStart : Date = new Date();
+    computedStart? : Date;
 
     @jsonMember
-    computedEnd : Date = new Date();
+    computedEnd? : Date;
 
     @jsonArrayMember(Dependency)
     dependencies : Dependency[] = [];
