@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef, OnInit, HostListener } from '@angular/core';
-import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent, GanttBarClickEvent, GanttItemType } from '@worktile/gantt';
+import { GanttItem, GanttViewType, GanttDragEvent, GanttTableDragDroppedEvent, GanttGroup, GanttToolbarOptions, GanttLinkType, GanttLinkDragEvent, GanttLineClickEvent, GanttSelectedEvent, GanttBarClickEvent, GanttItemType, GanttGroupInternal, GanttItemInternal } from '@worktile/gantt';
 import { Dependency, DependencyType, Group, Status, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
@@ -17,6 +17,21 @@ import { ActivatedRoute } from '@angular/router';
   standalone: false
 })
 export class AppComponent implements OnInit {
+onExpandChange(event: GanttItemInternal|GanttGroupInternal) {
+  console.log("Expand change event:", event);
+  
+  // Prüfen ob es sich um ein Item oder eine Gruppe handelt
+  if ('expanded' in event && event.id) {
+    if (event.expanded) {
+      // Element wurde ausgeklappt - zur expanded-Liste hinzufügen
+      this.chart.expanded.add(event.id);
+    } else {
+      // Element wurde eingeklappt - aus expanded-Liste entfernen
+      this.chart.expanded.delete(event.id);
+    }
+    console.log("Updated expanded set:", this.chart.expanded);
+  }
+}
 
   // Toast-Benachrichtigungen
   toasts: any[] = [];
@@ -624,7 +639,7 @@ onGroupTitleClick(id: string) {
     let itemById = new Map<string, GanttItem>();
     let childTaskIds = new Set<string>();
     let requiresDefaultGroup = false;
-
+    
     // Erst alle Child-Task-IDs sammeln
     this.chart.tasks.forEach(t => {
       if (t.children && t.children.length > 0) {
@@ -638,6 +653,10 @@ onGroupTitleClick(id: string) {
       let item : GanttItem = {title : t.title, id : t.id}; 
       item.progress = t.progress;
       item.origin = t;
+      
+      // Expanded-Zustand aus dem Chart wiederherstellen
+      // Standardmäßig sind alle Tasks geschlossen, außer sie stehen in der expanded-Liste
+      item.expanded = this.chart.expanded.has(t.id);
       
       // Start und End berechnen basierend auf computeFromChildren
       if (t.computeFromChildren && t.children && t.children.length > 0) {
@@ -699,18 +718,25 @@ onGroupTitleClick(id: string) {
         }
      })
     });
-    console.log("this.items: ");
-    console.log(this.items);
     
     this.groups = [];
     this.chart.groups.forEach( g => {
       let item : GanttGroup = {title : g.title, id : g.id}; 
       item.origin = g;
+      console.log("Group " + g.id + " expanded?" + this.chart.expanded.has(g.id));
+      item.expanded = this.chart.expanded.has(g.id);
       this.groups.push(item);
     });
 
     if (this.groups.length>0 && this.items.filter(i => i.group_id == Group.DEFAULT_GROUP_ID).length > 0) {
-      this.groups.push({id : Group.DEFAULT_GROUP_ID, title: ''});
+      // Default-Gruppe hat auch einen expanded-Zustand
+      // Standardmäßig geschlossen, außer explizit in expanded-Liste
+      const defaultGroup: GanttGroup = {
+        id: Group.DEFAULT_GROUP_ID, 
+        title: '',
+        expanded: this.chart.expanded.has(Group.DEFAULT_GROUP_ID)
+      };
+      this.groups.push(defaultGroup);
     }
     
     console.log("this.groups: ");

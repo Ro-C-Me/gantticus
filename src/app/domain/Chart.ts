@@ -1,5 +1,5 @@
 import { Group, Task } from "./Task";
-import { jsonObject, jsonArrayMember, jsonMember } from 'typedjson';
+import { jsonObject, jsonArrayMember, jsonMember, jsonSetMember } from 'typedjson';
 
 
 @jsonObject
@@ -16,5 +16,8 @@ export class Chart {
 
     @jsonArrayMember(Group)
     groups : Group[] = [];
+
+    @jsonSetMember(String)
+    expanded: Set<string> = new Set<string>();
 
 }

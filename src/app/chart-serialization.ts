@@ -5,11 +5,11 @@ export class ChartSerialization {
   private static serializer = new TypedJSON(Chart);
 
   static serialize(charts: Chart[]): string {
-    return JSON.stringify(charts);
+    return this.serializer.stringifyAsArray(charts);
   }
   
   static serializeChart(chart: Chart): string {
-    return JSON.stringify(chart);
+    return this.serializer.stringify(chart);
   }
 
   static deserialize(json: string): Chart | undefined {
