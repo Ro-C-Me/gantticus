@@ -182,6 +182,8 @@ availableCharts: {
 
   // Filter-Properties
   taskFilter = '';
+  showDownstreamDeps = false;
+  showUpstreamDeps = false;
   
   constructor(
     private modalService: NgbModal, 
@@ -824,50 +826,113 @@ onGroupTitleClick(id: string) {
 
   clearFilter() {
     this.taskFilter = '';
+    this.showDownstreamDeps = false;
+    this.showUpstreamDeps = false;
     this.updateGanttItems();
   }
 
   private getFilteredTasks(): Task[] {
-    if (!this.taskFilter || this.taskFilter.trim() === '') {
-      return this.chart.tasks;
-    }
-
-    const filterText = this.taskFilter.toLowerCase().trim();
-    const filteredTaskIds = new Set<string>();
+    // Basis-Tasks durch Textfilter ermitteln
+    let filteredTaskIds = new Set<string>();
     const parentTaskIds = new Set<string>();
 
-    // Ersten Durchgang: Direkte Treffer finden
-    this.chart.tasks.forEach(task => {
-      if (task.title.toLowerCase().includes(filterText)) {
-        filteredTaskIds.add(task.id);
-      }
-    });
+    if (!this.taskFilter || this.taskFilter.trim() === '') {
+      // Kein Textfilter: Dependency-Toggles haben keine Wirkung, alle Tasks werden angezeigt
+      return this.chart.tasks;
+    }
+    else {
+      const filterText = this.taskFilter.toLowerCase().trim();
 
-    // Zweiten Durchgang: Parent-Tasks von gefilterten Child-Tasks finden
-    this.chart.tasks.forEach(task => {
-      if (task.children && task.children.length > 0) {
-        const hasMatchingChild = task.children.some(childId => {
-          const childTask = this.chart.tasks.find(t => t.id === childId);
-          return childTask && childTask.title.toLowerCase().includes(filterText);
-        });
-        
-        if (hasMatchingChild) {
-          parentTaskIds.add(task.id);
-          // Child-Tasks hinzufügen, die den Filter erfüllen
-          task.children.forEach(childId => {
-            const childTask = this.chart.tasks.find(t => t.id === childId);
-            if (childTask && childTask.title.toLowerCase().includes(filterText)) {
-              filteredTaskIds.add(childId);
-            }
-          });
+      // Ersten Durchgang: Direkte Treffer finden
+      this.chart.tasks.forEach(task => {
+        if (task.title.toLowerCase().includes(filterText)) {
+          filteredTaskIds.add(task.id);
         }
-      }
-    });
+      });
 
+      // Zweiten Durchgang: Parent-Tasks von gefilterten Child-Tasks finden
+      this.chart.tasks.forEach(task => {
+        if (task.children && task.children.length > 0) {
+          const hasMatchingChild = task.children.some(childId => {
+            const childTask = this.chart.tasks.find(t => t.id === childId);
+            return childTask && childTask.title.toLowerCase().includes(filterText);
+          });
+          if (hasMatchingChild) {
+            parentTaskIds.add(task.id);
+            // Child-Tasks hinzufügen, die den Filter erfüllen
+            task.children.forEach(childId => {
+              const childTask = this.chart.tasks.find(t => t.id === childId);
+              if (childTask && childTask.title.toLowerCase().includes(filterText)) {
+                filteredTaskIds.add(childId);
+              }
+            });
+          }
+        }
+      });
     // Alle gefilterten Task-IDs kombinieren
-    const allFilteredIds = new Set([...filteredTaskIds, ...parentTaskIds]);
+    filteredTaskIds = new Set([...filteredTaskIds, ...parentTaskIds]);
+  }
 
-    return this.chart.tasks.filter(task => allFilteredIds.has(task.id));
+  // Erweiterung NUR in der jeweiligen Richtung, ausgehend von der Textsuche
+  let resultIds = new Set(filteredTaskIds);
+  if (this.showDownstreamDeps) {
+    const downstreamIds = this.getDownstreamDependencies(filteredTaskIds);
+    downstreamIds.forEach(id => resultIds.add(id));
+  }
+  if (this.showUpstreamDeps) {
+    const upstreamIds = this.getUpstreamDependencies(filteredTaskIds);
+    upstreamIds.forEach(id => resultIds.add(id));
+  }
+
+  return this.chart.tasks.filter(task => resultIds.has(task.id));
+  }
+
+  private getDownstreamDependencies(taskIds: Set<string>): Set<string> {
+    const downstreamIds = new Set<string>();
+    const visited = new Set<string>();
+
+    // Downstream: Finde alle Tasks, die von den gefilterten Tasks direkt oder indirekt abhängen
+    const findDependents = (sourceTaskId: string) => {
+      if (visited.has(sourceTaskId)) return;
+      visited.add(sourceTaskId);
+
+      // Alle Tasks durchsuchen, die eine Dependency auf sourceTaskId haben
+      this.chart.tasks.forEach(task => {
+        if (task.dependencies && task.dependencies.some(dep => dep.taskId === sourceTaskId)) {
+          if (!downstreamIds.has(task.id)) {
+            downstreamIds.add(task.id);
+            findDependents(task.id); // Rekursiv weiter suchen
+          }
+        }
+      });
+    };
+
+    taskIds.forEach(taskId => findDependents(taskId));
+    return downstreamIds;
+  }
+
+  private getUpstreamDependencies(taskIds: Set<string>): Set<string> {
+    const upstreamIds = new Set<string>();
+    const visited = new Set<string>();
+
+    // Upstream: Finde alle Tasks, von denen die gefilterten Tasks direkt oder indirekt abhängen
+    const findBlockers = (taskId: string) => {
+      if (visited.has(taskId)) return;
+      visited.add(taskId);
+
+      const task = this.chart.tasks.find(t => t.id === taskId);
+      if (task && task.dependencies) {
+        task.dependencies.forEach(dep => {
+          if (!upstreamIds.has(dep.taskId)) {
+            upstreamIds.add(dep.taskId);
+            findBlockers(dep.taskId); // Rekursiv weiter suchen
+          }
+        });
+      }
+    };
+
+    taskIds.forEach(taskId => findBlockers(taskId));
+    return upstreamIds;
   }
 
   // Speichert den aktuellen Zustand für Undo
