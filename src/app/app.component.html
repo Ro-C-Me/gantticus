@@ -134,6 +134,36 @@
     </div>
   </header>
 
+  <!-- Filter-Bereich -->
+  <div class="container-fluid py-2 bg-light border-bottom">
+    <div class="row">
+      <div class="col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">
+            <i class="bi bi-search"></i>
+          </span>
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Tasks filtern..."
+            [(ngModel)]="taskFilter"
+            (input)="onFilterChange()"
+            aria-label="Task-Filter"
+          />
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            (click)="clearFilter()"
+            [disabled]="!taskFilter"
+            title="Filter zurücksetzen"
+          >
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <ngx-gantt #gantt [groups]="groups" [items]="items" [viewType]="viewType" [draggable]="true" (dragEnded)="dragEnded($event)" 
 [showToolbar]="true"
 [toolbarOptions]="toolbarOptions"
