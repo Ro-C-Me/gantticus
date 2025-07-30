@@ -161,6 +161,41 @@
           </button>
         </div>
       </div>
+      <div class="col-md-4">
+        <div class="d-flex gap-2">
+          <!-- Downstream Dependencies Toggle -->
+          <input 
+            type="checkbox" 
+            class="btn-check" 
+            id="downstreamDeps" 
+            [(ngModel)]="showDownstreamDeps"
+            (change)="onFilterChange()"
+          >
+          <label 
+            class="btn btn-outline-primary btn-sm" 
+            for="downstreamDeps"
+            title="Abhängigkeiten anzeigen (Tasks, von denen die gefundenen abhängen)"
+          >
+            <i class="bi bi-arrow-down-circle"></i>
+          </label>
+
+          <!-- Upstream Dependencies Toggle -->
+          <input 
+            type="checkbox" 
+            class="btn-check" 
+            id="upstreamDeps" 
+            [(ngModel)]="showUpstreamDeps"
+            (change)="onFilterChange()"
+          >
+          <label 
+            class="btn btn-outline-success btn-sm" 
+            for="upstreamDeps"
+            title="Nachfolger anzeigen (Tasks, die von den gefundenen abhängen)"
+          >
+            <i class="bi bi-arrow-up-circle"></i>
+          </label>
+        </div>
+      </div>
     </div>
   </div>
 
