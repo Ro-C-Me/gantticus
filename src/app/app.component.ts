@@ -179,6 +179,9 @@ availableCharts: {
   canUndo = false;
   canRedo = false;
   hasUnsavedChanges = false;
+
+  // Filter-Properties
+  taskFilter = '';
   
   constructor(
     private modalService: NgbModal, 
@@ -640,16 +643,24 @@ onGroupTitleClick(id: string) {
     let childTaskIds = new Set<string>();
     let requiresDefaultGroup = false;
     
-    // Erst alle Child-Task-IDs sammeln
-    this.chart.tasks.forEach(t => {
+    // Gefilterte Tasks verwenden statt this.chart.tasks
+    const filteredTasks = this.getFilteredTasks();
+    
+    // Erst alle Child-Task-IDs sammeln (nur von gefilterten Tasks)
+    filteredTasks.forEach(t => {
       if (t.children && t.children.length > 0) {
-        t.children.forEach(childId => childTaskIds.add(childId));
+        t.children.forEach(childId => {
+          // Nur Children hinzufügen, die auch in der gefilterten Liste sind
+          if (filteredTasks.some(ft => ft.id === childId)) {
+            childTaskIds.add(childId);
+          }
+        });
       }
     });
 
     this.items = [];
 
-    this.chart.tasks.forEach( t => {
+    filteredTasks.forEach( t => {
       let item : GanttItem = {title : t.title, id : t.id}; 
       item.progress = t.progress;
       item.origin = t;
@@ -694,7 +705,7 @@ onGroupTitleClick(id: string) {
     });
 
     // Sub-Tasks (children) zuweisen - nach dem alle Items erstellt sind
-    this.chart.tasks.forEach(t => {
+    filteredTasks.forEach(t => {
       if (t.children && t.children.length > 0) {
         const parentItem = itemById.get(t.id);
         if (parentItem) {
@@ -705,7 +716,7 @@ onGroupTitleClick(id: string) {
       }
     });
 
-    this.chart.tasks.forEach(t => {
+    filteredTasks.forEach(t => {
      t.dependencies.forEach(d => {
         if (!itemById.get(d.taskId)) {
           console.warn(t.id + " seem to depend on unknown task " + d.taskId);
@@ -719,15 +730,22 @@ onGroupTitleClick(id: string) {
      })
     });
     
+    // Gruppen filtern - nur Gruppen anzeigen, die gefilterte Tasks enthalten
     this.groups = [];
+    const usedGroupIds = new Set(this.items.map(item => item.group_id));
+    
     this.chart.groups.forEach( g => {
-      let item : GanttGroup = {title : g.title, id : g.id}; 
-      item.origin = g;
-      console.log("Group " + g.id + " expanded?" + this.chart.expanded.has(g.id));
-      item.expanded = this.chart.expanded.has(g.id);
-      this.groups.push(item);
+      // Nur Gruppen hinzufügen, die auch Tasks enthalten
+      if (usedGroupIds.has(g.id)) {
+        let item : GanttGroup = {title : g.title, id : g.id}; 
+        item.origin = g;
+        console.log("Group " + g.id + " expanded?" + this.chart.expanded.has(g.id));
+        item.expanded = this.chart.expanded.has(g.id);
+        this.groups.push(item);
+      }
     });
 
+    // Default-Gruppe nur hinzufügen, wenn sie Tasks enthält
     if (this.groups.length>0 && this.items.filter(i => i.group_id == Group.DEFAULT_GROUP_ID).length > 0) {
       // Default-Gruppe hat auch einen expanded-Zustand
       // Standardmäßig geschlossen, außer explizit in expanded-Liste
@@ -797,6 +815,59 @@ onGroupTitleClick(id: string) {
   
   onCancelEdit() {
     this.isEditingName = false;
+  }
+
+  // Filter-Methoden
+  onFilterChange() {
+    this.updateGanttItems();
+  }
+
+  clearFilter() {
+    this.taskFilter = '';
+    this.updateGanttItems();
+  }
+
+  private getFilteredTasks(): Task[] {
+    if (!this.taskFilter || this.taskFilter.trim() === '') {
+      return this.chart.tasks;
+    }
+
+    const filterText = this.taskFilter.toLowerCase().trim();
+    const filteredTaskIds = new Set<string>();
+    const parentTaskIds = new Set<string>();
+
+    // Ersten Durchgang: Direkte Treffer finden
+    this.chart.tasks.forEach(task => {
+      if (task.title.toLowerCase().includes(filterText)) {
+        filteredTaskIds.add(task.id);
+      }
+    });
+
+    // Zweiten Durchgang: Parent-Tasks von gefilterten Child-Tasks finden
+    this.chart.tasks.forEach(task => {
+      if (task.children && task.children.length > 0) {
+        const hasMatchingChild = task.children.some(childId => {
+          const childTask = this.chart.tasks.find(t => t.id === childId);
+          return childTask && childTask.title.toLowerCase().includes(filterText);
+        });
+        
+        if (hasMatchingChild) {
+          parentTaskIds.add(task.id);
+          // Child-Tasks hinzufügen, die den Filter erfüllen
+          task.children.forEach(childId => {
+            const childTask = this.chart.tasks.find(t => t.id === childId);
+            if (childTask && childTask.title.toLowerCase().includes(filterText)) {
+              filteredTaskIds.add(childId);
+            }
+          });
+        }
+      }
+    });
+
+    // Alle gefilterten Task-IDs kombinieren
+    const allFilteredIds = new Set([...filteredTaskIds, ...parentTaskIds]);
+
+    return this.chart.tasks.filter(task => allFilteredIds.has(task.id));
   }
 
   // Speichert den aktuellen Zustand für Undo
