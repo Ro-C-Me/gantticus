@@ -146,7 +146,7 @@
             type="text"
             class="form-control"
             placeholder="Tasks filtern..."
-            [(ngModel)]="taskFilter"
+            [(ngModel)]="chart.filter.taskFilter"
             (input)="onFilterChange()"
             aria-label="Task-Filter"
           />
@@ -154,7 +154,7 @@
             class="btn btn-outline-secondary"
             type="button"
             (click)="clearFilter()"
-            [disabled]="!taskFilter"
+            [disabled]="!chart.filter.taskFilter"
             title="Filter zurücksetzen"
           >
             <i class="bi bi-x"></i>
@@ -170,7 +170,7 @@
               type="checkbox" 
               class="btn-check" 
               id="upstreamDeps" 
-              [(ngModel)]="showUpstreamDeps"
+              [(ngModel)]="chart.filter.showUpstreamDeps"
               (change)="onFilterChange()"
             >
             <label
@@ -186,7 +186,7 @@
               type="checkbox" 
               class="btn-check" 
               id="downstreamDeps" 
-              [(ngModel)]="showDownstreamDeps"
+              [(ngModel)]="chart.filter.showDownstreamDeps"
               (change)="onFilterChange()"
             >
             <label 
@@ -204,7 +204,7 @@
               type="checkbox" 
               class="btn-check" 
               id="showOpenTasks" 
-              [(ngModel)]="showOpenTasks"
+              [(ngModel)]="chart.filter.showOpenTasks"
               (change)="onFilterChange()"
             >
             <label 
@@ -220,7 +220,7 @@
               type="checkbox" 
               class="btn-check" 
               id="showInProgressTasks" 
-              [(ngModel)]="showInProgressTasks"
+              [(ngModel)]="chart.filter.showInProgressTasks"
               (change)="onFilterChange()"
             >
             <label 
@@ -236,7 +236,7 @@
               type="checkbox" 
               class="btn-check" 
               id="showDoneTasks" 
-              [(ngModel)]="showDoneTasks"
+              [(ngModel)]="chart.filter.showDoneTasks"
               (change)="onFilterChange()"
             >
             <label 

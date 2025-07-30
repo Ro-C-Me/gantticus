@@ -180,15 +180,7 @@ availableCharts: {
   canRedo = false;
   hasUnsavedChanges = false;
 
-  // Filter-Properties
-  taskFilter = '';
-  showDownstreamDeps = false;
-  showUpstreamDeps = false;
-  
-  // Status Filter Properties
-  showOpenTasks = true;
-  showInProgressTasks = true;
-  showDoneTasks = true;
+  // Filter-Properties sind jetzt in chart.filter enthalten
   
   constructor(
     private modalService: NgbModal, 
@@ -830,13 +822,13 @@ onGroupTitleClick(id: string) {
   }
 
   clearFilter() {
-    this.taskFilter = '';
-    this.showDownstreamDeps = false;
-    this.showUpstreamDeps = false;
+    this.chart.filter.taskFilter = '';
+    this.chart.filter.showDownstreamDeps = false;
+    this.chart.filter.showUpstreamDeps = false;
     // Status-Filter auf alle anzeigen zurücksetzen
-    this.showOpenTasks = true;
-    this.showInProgressTasks = true;
-    this.showDoneTasks = true;
+    this.chart.filter.showOpenTasks = true;
+    this.chart.filter.showInProgressTasks = true;
+    this.chart.filter.showDoneTasks = true;
     this.updateGanttItems();
   }
 
@@ -845,16 +837,16 @@ onGroupTitleClick(id: string) {
     let filteredTaskIds = new Set<string>();
     const parentTaskIds = new Set<string>();
 
-    if (!this.taskFilter || this.taskFilter.trim() === '') {
+    if (!this.chart.filter.taskFilter || this.chart.filter.taskFilter.trim() === '') {
       // Wenn kein Textfilter, aber Dependencies aktiviert, alle Tasks als Basis nehmen
-      if (this.showDownstreamDeps || this.showUpstreamDeps) {
+      if (this.chart.filter.showDownstreamDeps || this.chart.filter.showUpstreamDeps) {
         this.chart.tasks.forEach(task => filteredTaskIds.add(task.id));
       } else {
         // Status-Filter anwenden
         return this.chart.tasks.filter(task => this.isTaskStatusVisible(task));
       }
     } else {
-      const filterText = this.taskFilter.toLowerCase().trim();
+      const filterText = this.chart.filter.taskFilter.toLowerCase().trim();
 
       // Ersten Durchgang: Direkte Treffer finden
       this.chart.tasks.forEach(task => {
@@ -888,11 +880,11 @@ onGroupTitleClick(id: string) {
 
   // Erweiterung NUR in der jeweiligen Richtung, ausgehend von der Textsuche
   let resultIds = new Set(filteredTaskIds);
-  if (this.showDownstreamDeps) {
+  if (this.chart.filter.showDownstreamDeps) {
     const downstreamIds = this.getDownstreamDependencies(filteredTaskIds);
     downstreamIds.forEach(id => resultIds.add(id));
   }
-  if (this.showUpstreamDeps) {
+  if (this.chart.filter.showUpstreamDeps) {
     const upstreamIds = this.getUpstreamDependencies(filteredTaskIds);
     upstreamIds.forEach(id => resultIds.add(id));
   }    let filtered = this.chart.tasks.filter(task => resultIds.has(task.id));
@@ -1284,17 +1276,17 @@ onGroupTitleClick(id: string) {
   // Hilfsmethode zur Prüfung, ob ein Task basierend auf Status-Filtern sichtbar ist
   private isTaskStatusVisible(task: Task): boolean {
     // Wenn alle Status-Filter deaktiviert sind, alle Tasks anzeigen
-    if (!this.showOpenTasks && !this.showInProgressTasks && !this.showDoneTasks) {
+    if (!this.chart.filter.showOpenTasks && !this.chart.filter.showInProgressTasks && !this.chart.filter.showDoneTasks) {
       return true;
     }
     
     switch (task.status) {
       case Status.OPEN:
-        return this.showOpenTasks;
+        return this.chart.filter.showOpenTasks;
       case Status.IN_PROGRESS:
-        return this.showInProgressTasks;
+        return this.chart.filter.showInProgressTasks;
       case Status.DONE:
-        return this.showDoneTasks;
+        return this.chart.filter.showDoneTasks;
       default:
         return true; // Fallback für unbekannte Status
     }

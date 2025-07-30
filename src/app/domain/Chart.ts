@@ -1,4 +1,5 @@
 import { Group, Task } from "./Task";
+import { ChartFilter } from "./ChartFilter";
 import { jsonObject, jsonArrayMember, jsonMember, jsonSetMember } from 'typedjson';
 
 
@@ -19,5 +20,8 @@ export class Chart {
 
     @jsonSetMember(String)
     expanded: Set<string> = new Set<string>();
+
+    @jsonMember
+    filter: ChartFilter = new ChartFilter();
 
 }
