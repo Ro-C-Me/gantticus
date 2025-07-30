@@ -173,7 +173,7 @@
               [(ngModel)]="showUpstreamDeps"
               (change)="onFilterChange()"
             >
-            <label 
+            <label
               class="btn btn-outline-secondary btn-sm" 
               for="upstreamDeps"
               title="Nachfolger anzeigen (Tasks, die von den gefundenen abhängen)"
@@ -195,6 +195,56 @@
               title="Abhängigkeiten anzeigen (Tasks, von denen die gefundenen abhängen)"
             >
               <i class="bi bi-arrow-down-circle me-1"></i>
+            </label>
+          </div>
+          <!-- Status Filter Button Group -->
+          <div class="btn-group" role="group" aria-label="Status-Filter">
+            <!-- Open Tasks Toggle -->
+            <input 
+              type="checkbox" 
+              class="btn-check" 
+              id="showOpenTasks" 
+              [(ngModel)]="showOpenTasks"
+              (change)="onFilterChange()"
+            >
+            <label 
+              class="btn btn-outline-secondary btn-sm" 
+              for="showOpenTasks"
+              title="Open Tasks anzeigen"
+            >
+              <i class="bi bi-circle"></i>
+            </label>
+
+            <!-- In Progress Tasks Toggle -->
+            <input 
+              type="checkbox" 
+              class="btn-check" 
+              id="showInProgressTasks" 
+              [(ngModel)]="showInProgressTasks"
+              (change)="onFilterChange()"
+            >
+            <label 
+              class="btn btn-outline-secondary btn-sm" 
+              for="showInProgressTasks"
+              title="In Progress Tasks anzeigen"
+            >
+              <i class="bi bi-arrow-clockwise"></i>
+            </label>
+
+            <!-- Done Tasks Toggle -->
+            <input 
+              type="checkbox" 
+              class="btn-check" 
+              id="showDoneTasks" 
+              [(ngModel)]="showDoneTasks"
+              (change)="onFilterChange()"
+            >
+            <label 
+              class="btn btn-outline-secondary btn-sm" 
+              for="showDoneTasks"
+              title="Abgeschlossene Tasks anzeigen"
+            >
+              <i class="bi bi-check-circle"></i>
             </label>
           </div>
         </div>
