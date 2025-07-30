@@ -185,6 +185,11 @@ availableCharts: {
   showDownstreamDeps = false;
   showUpstreamDeps = false;
   
+  // Status Filter Properties
+  showOpenTasks = true;
+  showInProgressTasks = true;
+  showDoneTasks = true;
+  
   constructor(
     private modalService: NgbModal, 
     private chartStorage: ChartStorageService, 
@@ -828,6 +833,10 @@ onGroupTitleClick(id: string) {
     this.taskFilter = '';
     this.showDownstreamDeps = false;
     this.showUpstreamDeps = false;
+    // Status-Filter auf alle anzeigen zurücksetzen
+    this.showOpenTasks = true;
+    this.showInProgressTasks = true;
+    this.showDoneTasks = true;
     this.updateGanttItems();
   }
 
@@ -837,10 +846,14 @@ onGroupTitleClick(id: string) {
     const parentTaskIds = new Set<string>();
 
     if (!this.taskFilter || this.taskFilter.trim() === '') {
-      // Kein Textfilter: Dependency-Toggles haben keine Wirkung, alle Tasks werden angezeigt
-      return this.chart.tasks;
-    }
-    else {
+      // Wenn kein Textfilter, aber Dependencies aktiviert, alle Tasks als Basis nehmen
+      if (this.showDownstreamDeps || this.showUpstreamDeps) {
+        this.chart.tasks.forEach(task => filteredTaskIds.add(task.id));
+      } else {
+        // Status-Filter anwenden
+        return this.chart.tasks.filter(task => this.isTaskStatusVisible(task));
+      }
+    } else {
       const filterText = this.taskFilter.toLowerCase().trim();
 
       // Ersten Durchgang: Direkte Treffer finden
@@ -882,9 +895,10 @@ onGroupTitleClick(id: string) {
   if (this.showUpstreamDeps) {
     const upstreamIds = this.getUpstreamDependencies(filteredTaskIds);
     upstreamIds.forEach(id => resultIds.add(id));
-  }
-
-  return this.chart.tasks.filter(task => resultIds.has(task.id));
+  }    let filtered = this.chart.tasks.filter(task => resultIds.has(task.id));
+    // Status-Filter anwenden
+    filtered = filtered.filter(task => this.isTaskStatusVisible(task));
+    return filtered;
   }
 
   private getDownstreamDependencies(taskIds: Set<string>): Set<string> {
@@ -1264,6 +1278,25 @@ onGroupTitleClick(id: string) {
       case 'error': return 'bi-exclamation-triangle-fill';
       case 'info': return 'bi-info-circle-fill';
       default: return 'bi-info-circle';
+    }
+  }
+
+  // Hilfsmethode zur Prüfung, ob ein Task basierend auf Status-Filtern sichtbar ist
+  private isTaskStatusVisible(task: Task): boolean {
+    // Wenn alle Status-Filter deaktiviert sind, alle Tasks anzeigen
+    if (!this.showOpenTasks && !this.showInProgressTasks && !this.showDoneTasks) {
+      return true;
+    }
+    
+    switch (task.status) {
+      case Status.OPEN:
+        return this.showOpenTasks;
+      case Status.IN_PROGRESS:
+        return this.showInProgressTasks;
+      case Status.DONE:
+        return this.showDoneTasks;
+      default:
+        return true; // Fallback für unbekannte Status
     }
   }
 }
