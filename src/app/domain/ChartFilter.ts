@@ -19,4 +19,7 @@ export class ChartFilter {
     
     @jsonMember
     showDoneTasks: boolean = true;
+    
+    @jsonMember
+    showArchivedTasks: boolean = false;
 }

@@ -21,6 +21,13 @@ export class TaskStatusComponent {
 
   @Input() showProgress: boolean = true;
   
+  // Neue Inputs für Validation
+  @Input() task!: Task; // Der aktuelle Task
+  @Input() allTasks: Task[] = []; // Alle Tasks für Parent/Child-Validation
+  
+  // Neuer Output für Validation-Errors
+  @Output() validationError = new EventEmitter<string>();
+  
   // Referenz auf das aktuelle Chart, um Änderungen zu speichern
   @Input() chart?: Chart;
   
@@ -52,20 +59,87 @@ export class TaskStatusComponent {
 
   // Change the status on icon click
   changeStatus(event: MouseEvent): void {
-    event.stopPropagation()
-    switch (this.status) {
-      case Status.OPEN:
-        this.status = Status.IN_PROGRESS;
-        break;
-      case Status.IN_PROGRESS:
-        this.status = Status.DONE;
-        this.progress = 1.0;
-        this.onProgressChange();
-        break;
-      case Status.DONE:
-        this.status = Status.OPEN;
-        break;
+    event.stopPropagation();
+    
+    const newStatus = this.getNextStatus(this.status);
+    
+    // Validation BEVOR die Änderung gemacht wird
+    const validation = this.validateStatusChange(newStatus);
+    if (!validation.allowed) {
+      // Validation-Error emittieren statt Toast direkt zu zeigen
+      this.validationError.emit(validation.reason!);
+      return; // Status bleibt unverändert
     }
-    this.statusChange.emit(this.status); // Emit the updated status
+    
+    // Nur wenn erlaubt: Status ändern
+    this.status = newStatus;
+    if (newStatus === Status.DONE) {
+      this.progress = 1.0;
+      this.onProgressChange();
+    }
+    
+    this.statusChange.emit(this.status);
+  }
+
+  private getNextStatus(currentStatus: Status): Status {
+    switch (currentStatus) {
+      case Status.OPEN:
+        return Status.IN_PROGRESS;
+      case Status.IN_PROGRESS:
+        return Status.DONE;
+      case Status.DONE:
+        return Status.ARCHIVED;
+      case Status.ARCHIVED:
+        return Status.OPEN;
+      default:
+        return Status.OPEN;
+    }
+  }
+
+  private validateStatusChange(newStatus: Status): { allowed: boolean, reason?: string } {
+    if (!this.task) {
+      return { allowed: false, reason: 'Task nicht verfügbar für Validation' };
+    }
+
+    // Validierung nur für Parent-Tasks mit Children
+    const childTasks = this.getChildTasks(this.task.id);
+    if (childTasks.length === 0) {
+      return { allowed: true }; // Child-Tasks oder Tasks ohne Children können frei geändert werden
+    }
+
+    // Parent-Task Validierungen
+    if (newStatus === Status.DONE) {
+      const allChildrenDone = childTasks.every(child => child.status === Status.DONE);
+      if (!allChildrenDone) {
+        const openChildren = childTasks.filter(child => child.status !== Status.DONE);
+        return { 
+          allowed: false, 
+          reason: `Parent-Task kann nicht auf DONE gesetzt werden. ${openChildren.length} Child-Task(s) sind noch nicht abgeschlossen.` 
+        };
+      }
+    } else if (newStatus === Status.ARCHIVED) {
+      const allChildrenArchived = childTasks.every(child => child.status === Status.ARCHIVED);
+      if (!allChildrenArchived) {
+        const nonArchivedChildren = childTasks.filter(child => child.status !== Status.ARCHIVED);
+        return { 
+          allowed: false, 
+          reason: `Parent-Task kann nicht archiviert werden. ${nonArchivedChildren.length} Child-Task(s) sind noch nicht archiviert.` 
+        };
+      }
+    }
+
+    return { allowed: true };
+  }
+
+  private getChildTasks(parentId: string): Task[] {
+    const parentTask = this.allTasks.find(t => t.id === parentId);
+    if (!parentTask || !parentTask.children) {
+      return [];
+    }
+    
+    // Child-Task-IDs in tatsächliche Task-Objekte umwandeln
+    return parentTask.children
+      .map(childId => this.allTasks.find(t => t.id === childId))
+      .filter((task): task is Task => task !== undefined);
   }
 }

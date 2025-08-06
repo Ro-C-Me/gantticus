@@ -49,10 +49,23 @@ onExpandChange(event: GanttItemInternal|GanttGroupInternal) {
 }
   
 
-  onStatusChange(task: Task): void {
-    // Erst speichern, dann UI aktualisieren
+  onStatusChange(item: GanttItem): void {
+    if (!(item.origin instanceof Task)) {
+      console.warn('Item\'s origin is not a Task instance:', item.origin);
+      return;
+    }
+    
+    const task = item.origin;
+    
+    // Status-Änderung ist bereits validiert und erlaubt
     this.saveStateForUndo();
     this.updateGanttItems();
+    
+    console.log(`Status changed for task ${task.id}: ${task.status}`);
+  }
+
+  onValidationError(errorMessage: string): void {
+    this.showToast('Status-Änderung nicht möglich', errorMessage, 'error');
   }
 
   onProgressChange(item: GanttItem): void {
@@ -599,8 +612,6 @@ onGroupTitleClick(id: string) {
       });
     }
 
-
-
   onAddTask(group? : string) {
     let id = this.createId();
     let newTask: Task = new Task();
@@ -829,6 +840,7 @@ onGroupTitleClick(id: string) {
     this.chart.filter.showOpenTasks = true;
     this.chart.filter.showInProgressTasks = true;
     this.chart.filter.showDoneTasks = true;
+    this.chart.filter.showArchivedTasks = false;
     this.updateGanttItems();
   }
 
@@ -1098,6 +1110,8 @@ onGroupTitleClick(id: string) {
         return 'in progress';
       case Status.DONE:
         return 'Done';
+      case Status.ARCHIVED:
+        return 'Archived';
       default:
         return 'Open';
     }
@@ -1276,7 +1290,7 @@ onGroupTitleClick(id: string) {
   // Hilfsmethode zur Prüfung, ob ein Task basierend auf Status-Filtern sichtbar ist
   private isTaskStatusVisible(task: Task): boolean {
     // Wenn alle Status-Filter deaktiviert sind, alle Tasks anzeigen
-    if (!this.chart.filter.showOpenTasks && !this.chart.filter.showInProgressTasks && !this.chart.filter.showDoneTasks) {
+    if (!this.chart.filter.showOpenTasks && !this.chart.filter.showInProgressTasks && !this.chart.filter.showDoneTasks && !this.chart.filter.showArchivedTasks) {
       return true;
     }
     
@@ -1287,6 +1301,8 @@ onGroupTitleClick(id: string) {
         return this.chart.filter.showInProgressTasks;
       case Status.DONE:
         return this.chart.filter.showDoneTasks;
+      case Status.ARCHIVED:
+        return this.chart.filter.showArchivedTasks;
       default:
         return true; // Fallback für unbekannte Status
     }

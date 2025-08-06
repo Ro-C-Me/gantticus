@@ -75,7 +75,7 @@
     <h6>Status</h6>
     <div class="row mb-3">
       <div class="col-auto">
-        <app-task-status [(status)]="task.status" [(progress)]="task.progress" [showProgress]="false"></app-task-status>
+        <app-task-status [(status)]="task.status" [(progress)]="task.progress" [showProgress]="false" [task]="task" [allTasks]="tasks" (validationError)="onValidationError($event)"></app-task-status>
       </div>
       <div class="col">
         <input [disabled]="this.task.status !== 'IN_PROGRESS'" type="range" id="progress" formControlName="progress" class="form-range" min="0"

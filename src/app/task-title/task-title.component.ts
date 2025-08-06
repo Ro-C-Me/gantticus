@@ -1,7 +1,7 @@
 import type { GanttItem } from '@worktile/gantt';
 import { Component, Input, Output, EventEmitter  } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Task } from '../domain/Task';
+import { Task, Status } from '../domain/Task';
 
 @Component({
   selector: 'app-task-title',
@@ -22,7 +22,6 @@ export class TaskTitleComponent {
   }
 
   hasUrl(): boolean {
-
     if (this.item.origin instanceof Task) {
       return this.item.origin.ticketUrl.trim() != '';
     }
@@ -37,6 +36,5 @@ export class TaskTitleComponent {
 
   onDeleteClick() {
     this.deleted.emit(this.item);
-  
   }
 }
