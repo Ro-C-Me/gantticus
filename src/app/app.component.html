@@ -246,6 +246,22 @@
             >
               <i class="bi bi-check-circle"></i>
             </label>
+
+            <!-- Archived Tasks Toggle -->
+            <input 
+              type="checkbox" 
+              class="btn-check" 
+              id="showArchivedTasks" 
+              [(ngModel)]="chart.filter.showArchivedTasks"
+              (change)="onFilterChange()"
+            >
+            <label 
+              class="btn btn-outline-secondary btn-sm" 
+              for="showArchivedTasks"
+              title="Archivierte Tasks anzeigen"
+            >
+              <i class="bi bi-archive"></i>
+            </label>
           </div>
         </div>
       </div>
@@ -281,6 +297,9 @@
           (statusChange)="onStatusChange(item)"
           (progressChange)="onProgressChange(item)"
           [(progress)]="item.origin.progress"
+          [task]="item.origin"
+          [allTasks]="chart.tasks"
+          (validationError)="onValidationError($event)"
           [chart]="chart"
         ></app-task-status>
       </ng-template>

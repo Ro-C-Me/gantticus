@@ -17,12 +17,26 @@
   pointer-events: auto;
 }
 
-/* Weißer Hintergrund und Padding für das Icon */
+/* Allgemeine Styling für alle Icons */
 .task-action-overlay i {
-  background: #f00;
   color: #fff;
-  padding: 0px 10px 0px 10px;
-    border-radius: 20%; /* Optional: abgerundete Ecken */
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06); /* Optional: leichter Schatten */
+  padding: 2px 6px; /* Reduziertes Padding für kleinere Icons */
+  font-size: 0.8em; /* Kleinere Icon-Größe */
+  border-radius: 20%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
   cursor: pointer;
+  margin-left: 2px; /* Abstand zwischen den Icons */
+}
+
+/* Spezifische Farben für verschiedene Aktionen */
+.task-action-overlay i.bi-trash {
+  background: #dc3545; /* Rot für Löschen */
+}
+
+.task-action-overlay i.bi-archive {
+  background: #6c757d; /* Grau für Archivieren */
+}
+
+.task-action-overlay i.bi-arrow-clockwise {
+  background: #28a745; /* Grün für Wiederherstellen */
 }

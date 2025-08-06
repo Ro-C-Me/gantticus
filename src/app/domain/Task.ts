@@ -10,7 +10,8 @@ export enum DependencyType {
 export enum Status {
   OPEN = 'OPEN',
   IN_PROGRESS = 'IN_PROGRESS',
-  DONE = 'DONE'
+  DONE = 'DONE',
+  ARCHIVED = 'ARCHIVED'
 }
 
 @jsonObject

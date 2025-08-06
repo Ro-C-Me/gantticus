@@ -140,6 +140,10 @@ export class TaskEditModalComponent implements OnInit, AfterViewInit {
     this.taskForm.get('useColor')?.setValue(useColor);
   }
 
+  onValidationError(message: string) {
+    alert(message);
+  }
+
   onOk() {
     if (this.taskForm.invalid) {
       this.taskForm.markAllAsTouched();
