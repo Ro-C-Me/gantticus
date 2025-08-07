@@ -439,7 +439,9 @@ onGroupTitleClick(id: string) {
     console.log(toEdit);
     const modalRef = this.modalService.open(GroupEditModalComponent, { centered: true });
     // Kopie übergeben, damit Änderungen erst bei OK übernommen werden
-    modalRef.componentInstance.group = { ...toEdit };
+    const groupCopy = new Group();
+    Object.assign(groupCopy, toEdit);
+    modalRef.componentInstance.group = groupCopy;
 
 
     modalRef.result.then(
@@ -740,20 +742,32 @@ onGroupTitleClick(id: string) {
      })
     });
     
-    // Gruppen filtern - nur Gruppen anzeigen, die gefilterte Tasks enthalten
+    // Gruppen filtern - unterscheide zwischen "wirklich leer" und "leer gefiltert"
     this.groups = [];
     const usedGroupIds = new Set(this.items.map(item => item.group_id));
     
     this.chart.groups.forEach( g => {
-      // Nur Gruppen hinzufügen, die auch Tasks enthalten
-      if (usedGroupIds.has(g.id)) {
+      // Prüfe ob Gruppe überhaupt Tasks zugeordnet hat (in allen Tasks, nicht nur gefilterten)
+      const allTasksInGroup = this.chart.tasks.filter(task => task.group === g.id);
+      const isReallyEmpty = allTasksInGroup.length === 0;
+      
+      // Wirklich leere Gruppen immer anzeigen
+      if (isReallyEmpty) {
+        let item : GanttGroup = {title : g.title, id : g.id}; 
+        item.origin = g;
+        console.log("Group " + g.id + " expanded?" + this.chart.expanded.has(g.id));
+        item.expanded = this.chart.expanded.has(g.id);
+        this.groups.push(item);
+      }
+      // Gruppen mit Tasks nur anzeigen wenn sie auch gefilterte Tasks enthalten
+      else if (usedGroupIds.has(g.id)) {
         const groupTasks = this.items.filter(item => item.group_id === g.id);
         const hasNonArchivedTasks = groupTasks.some(item => 
           item.origin instanceof Task && item.origin.status !== Status.ARCHIVED
         );
         
-        // Zeige Gruppe wenn: hat nicht-archivierte Tasks ODER ist leer ODER archivierte Tasks werden angezeigt
-        if (hasNonArchivedTasks || groupTasks.length === 0 || this.chart.filter.showArchivedTasks) {
+        // Zeige Gruppe wenn: hat nicht-archivierte Tasks ODER archivierte Tasks werden angezeigt
+        if (hasNonArchivedTasks || this.chart.filter.showArchivedTasks) {
           let item : GanttGroup = {title : g.title, id : g.id}; 
           item.origin = g;
           console.log("Group " + g.id + " expanded?" + this.chart.expanded.has(g.id));
