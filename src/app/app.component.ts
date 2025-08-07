@@ -747,24 +747,40 @@ onGroupTitleClick(id: string) {
     this.chart.groups.forEach( g => {
       // Nur Gruppen hinzufügen, die auch Tasks enthalten
       if (usedGroupIds.has(g.id)) {
-        let item : GanttGroup = {title : g.title, id : g.id}; 
-        item.origin = g;
-        console.log("Group " + g.id + " expanded?" + this.chart.expanded.has(g.id));
-        item.expanded = this.chart.expanded.has(g.id);
-        this.groups.push(item);
+        const groupTasks = this.items.filter(item => item.group_id === g.id);
+        const hasNonArchivedTasks = groupTasks.some(item => 
+          item.origin instanceof Task && item.origin.status !== Status.ARCHIVED
+        );
+        
+        // Zeige Gruppe wenn: hat nicht-archivierte Tasks ODER ist leer ODER archivierte Tasks werden angezeigt
+        if (hasNonArchivedTasks || groupTasks.length === 0 || this.chart.filter.showArchivedTasks) {
+          let item : GanttGroup = {title : g.title, id : g.id}; 
+          item.origin = g;
+          console.log("Group " + g.id + " expanded?" + this.chart.expanded.has(g.id));
+          item.expanded = this.chart.expanded.has(g.id);
+          this.groups.push(item);
+        }
       }
     });
 
     // Default-Gruppe nur hinzufügen, wenn sie Tasks enthält
-    if (this.groups.length>0 && this.items.filter(i => i.group_id == Group.DEFAULT_GROUP_ID).length > 0) {
-      // Default-Gruppe hat auch einen expanded-Zustand
-      // Standardmäßig geschlossen, außer explizit in expanded-Liste
-      const defaultGroup: GanttGroup = {
-        id: Group.DEFAULT_GROUP_ID, 
-        title: '',
-        expanded: this.chart.expanded.has(Group.DEFAULT_GROUP_ID)
-      };
-      this.groups.push(defaultGroup);
+    const defaultGroupTasks = this.items.filter(i => i.group_id == Group.DEFAULT_GROUP_ID);
+    if (this.groups.length > 0 && defaultGroupTasks.length > 0) {
+      const hasNonArchivedDefaultTasks = defaultGroupTasks.some(item => 
+        item.origin instanceof Task && item.origin.status !== Status.ARCHIVED
+      );
+      
+      // Zeige Default-Gruppe wenn: hat nicht-archivierte Tasks ODER archivierte Tasks werden angezeigt
+      if (hasNonArchivedDefaultTasks || this.chart.filter.showArchivedTasks) {
+        // Default-Gruppe hat auch einen expanded-Zustand
+        // Standardmäßig geschlossen, außer explizit in expanded-Liste
+        const defaultGroup: GanttGroup = {
+          id: Group.DEFAULT_GROUP_ID, 
+          title: '',
+          expanded: this.chart.expanded.has(Group.DEFAULT_GROUP_ID)
+        };
+        this.groups.push(defaultGroup);
+      }
     }
     
     console.log("this.groups: ");
