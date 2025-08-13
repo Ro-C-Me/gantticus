@@ -31,6 +31,9 @@ onExpandChange(event: GanttItemInternal|GanttGroupInternal) {
       this.chart.expanded.delete(event.id);
     }
     console.log("Updated expanded set:", this.chart.expanded);
+    
+    // Gantt-Items aktualisieren, um aggregierte Dependencies zu refresh'en
+    this.updateGanttItems();
   }
 }
 
@@ -753,6 +756,9 @@ onGroupTitleClick(id: string) {
         }
      })
     });
+
+    // Aggregierte Dependencies für eingeklappte Parent-Tasks hinzufügen
+    this.addAggregatedDependencies(itemById, filteredTasks);
     
     // Gruppen filtern - unterscheide zwischen "wirklich leer" und "leer gefiltert"
     this.groups = [];
@@ -830,6 +836,10 @@ onGroupTitleClick(id: string) {
         }
       }
     }
+
+    // Dependency-Aggregation: Sammelt alle Dependencies der Sub-Tasks und fügt sie dem Parent hinzu
+    // Wird nur aufgerufen, wenn der Parent eingeklappt ist (!item.expanded)
+    this.addAggregatedDependencies(itemById, filteredTasks);
   }
 
   onOpenChart(chart: { id: string; name: string; }) {
@@ -1580,5 +1590,140 @@ onGroupTitleClick(id: string) {
     
     // Wenn Parent auch keine direkte Gruppe hat, rekursiv weiter suchen
     return this.getParentGroupForTask(parentTask.id);
+  }
+
+  // Dependency-Aggregation: Sammelt alle Dependencies der Sub-Tasks und fügt sie dem Parent hinzu
+  // Wird nur aufgerufen, wenn der Parent eingeklappt ist (!item.expanded)
+  private addAggregatedDependencies(itemById: Map<string, GanttItem>, filteredTasks: Task[]): void {
+    for (const task of filteredTasks) {
+      const parentItem = itemById.get(task.id);
+      
+      // Nur für Parent-Tasks mit Children, die eingeklappt sind
+      if (parentItem && task.children && task.children.length > 0 && !parentItem.expanded) {
+        const aggregatedDeps = this.collectChildDependencies(task, new Set<string>());
+        const totalDeps = aggregatedDeps.incoming.length + aggregatedDeps.outgoing.length;
+        
+        if (totalDeps > 0) {
+          console.log(`Processing ${totalDeps} aggregated dependencies for collapsed parent ${task.id}:`, 
+                     `${aggregatedDeps.incoming.length} incoming, ${aggregatedDeps.outgoing.length} outgoing`);
+          
+          // Eingehende Dependencies verarbeiten: dependencyTaskId → Parent
+          for (const dep of aggregatedDeps.incoming) {
+            const blockingItem = itemById.get(dep.taskId);
+            if (blockingItem) {
+              if (!blockingItem.links) {
+                blockingItem.links = [];
+              }
+              const ganttLink = { link: task.id, type: this.mapDependencyType(dep.type) };
+              blockingItem.links.push(ganttLink);
+              console.log(`Added incoming aggregated link: ${dep.taskId} → ${task.id}`);
+            } else {
+              console.warn(`Incoming dependency target not found: ${dep.taskId}`);
+            }
+          }
+          
+          // Ausgehende Dependencies verarbeiten: Parent → dependencyTaskId
+          for (const dep of aggregatedDeps.outgoing) {
+            const targetItem = itemById.get(dep.taskId);
+            if (targetItem) {
+              if (!parentItem.links) {
+                parentItem.links = [];
+              }
+              const ganttLink = { link: dep.taskId, type: this.mapDependencyType(dep.type) };
+              parentItem.links.push(ganttLink);
+              console.log(`Added outgoing aggregated link: ${task.id} → ${dep.taskId}`);
+            } else {
+              console.warn(`Outgoing dependency target not found: ${dep.taskId}`);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Sammelt rekursiv alle Dependencies aller Child-Tasks
+  private collectChildDependencies(parentTask: Task, visited: Set<string>): { incoming: Dependency[], outgoing: Dependency[] } {
+    if (visited.has(parentTask.id) || !parentTask.children) {
+      return { incoming: [], outgoing: [] };
+    }
+    
+    visited.add(parentTask.id);
+    const incomingDependencies: Dependency[] = [];
+    const outgoingDependencies: Dependency[] = [];
+    
+    for (const childId of parentTask.children) {
+      const childTask = this.getTaskById(childId);
+      if (!childTask) continue;
+      
+      // 1. Eingehende Dependencies des Child-Tasks hinzufügen (wer blockiert diesen Child)
+      if (childTask.dependencies) {
+        for (const dep of childTask.dependencies) {
+          // Vermeiden von Duplikaten
+          if (!incomingDependencies.some(existing => 
+              existing.taskId === dep.taskId && existing.type === dep.type)) {
+            incomingDependencies.push(dep);
+          }
+        }
+      }
+      
+      // 2. Ausgehende Dependencies finden (wen blockiert dieser Child)
+      // Alle Tasks durchsuchen, die von diesem Child abhängen
+      this.chart.tasks.forEach(otherTask => {
+        if (otherTask.dependencies) {
+          otherTask.dependencies.forEach(dep => {
+            if (dep.taskId === childTask.id) {
+              // otherTask hängt von childTask ab -> childTask blockiert otherTask
+              // Als ausgehende Dependency vom Parent zu otherTask darstellen
+              const outgoingDep = new Dependency();
+              outgoingDep.taskId = otherTask.id;
+              outgoingDep.type = dep.type;
+              
+              // Vermeiden von Duplikaten
+              if (!outgoingDependencies.some(existing => 
+                  existing.taskId === outgoingDep.taskId && existing.type === outgoingDep.type)) {
+                outgoingDependencies.push(outgoingDep);
+              }
+            }
+          });
+        }
+      });
+      
+      // Rekursiv für Sub-Children
+      if (childTask.children && childTask.children.length > 0) {
+        const subDependencies = this.collectChildDependencies(childTask, visited);
+        // Eingehende Dependencies hinzufügen
+        for (const subDep of subDependencies.incoming) {
+          if (!incomingDependencies.some(existing => 
+              existing.taskId === subDep.taskId && existing.type === subDep.type)) {
+            incomingDependencies.push(subDep);
+          }
+        }
+        // Ausgehende Dependencies hinzufügen
+        for (const subDep of subDependencies.outgoing) {
+          if (!outgoingDependencies.some(existing => 
+              existing.taskId === subDep.taskId && existing.type === subDep.type)) {
+            outgoingDependencies.push(subDep);
+          }
+        }
+      }
+    }
+    
+    return { incoming: incomingDependencies, outgoing: outgoingDependencies };
+  }
+
+  // Hilfsmethode für Type-Mapping (ausgelagert für Wiederverwendung)
+  private mapDependencyType(type: DependencyType): import("@worktile/gantt").GanttLinkType {
+    switch (type) {
+      case DependencyType.FS:
+        return GanttLinkType.fs;
+      case DependencyType.FF:
+        return GanttLinkType.ff;
+      case DependencyType.SS:
+        return GanttLinkType.ss;
+      case DependencyType.SF:
+        return GanttLinkType.sf;
+      default:
+        throw new Error(`Unbekannter DependencyType: ${type}`);
+    }
   }
 }
