@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Chart } from './domain/Chart';
 import { ChartSerialization } from './chart-serialization';
+import { ToastService } from './toast.service';
 interface ChartBackup {
   timestamp: number;
   charts: Chart[];
@@ -15,6 +16,8 @@ export class ChartStorageService {
   private readonly BACKUP_STORAGE_KEY = 'charts_backups';
   private readonly BACKUP_INTERVAL_HOURS = 1;
   private readonly MAX_BACKUPS = 10;
+
+  constructor(private toastService: ToastService) {}
 
   // Chart speichern oder aktualisieren
   saveChart(chart: Chart): void {
@@ -47,6 +50,8 @@ export class ChartStorageService {
       
     } catch (error) {
       console.error('Failed to save charts:', error);
+      console.error('Charts data that failed to save:', charts);
+      this.toastService.showError('Speicherfehler', 'Fehler beim Speichern: Daten konnten nicht serialisiert werden');
       throw error; // Verhindert weiteres Verarbeiten
     }
   }
@@ -83,6 +88,8 @@ export class ChartStorageService {
       return loadedCharts;
     } catch (error) {
       console.error('Failed to load charts from storage:', error);
+      console.error('Stored data that failed to deserialize:', localStorage.getItem(this.STORAGE_KEY));
+      this.toastService.showError('Ladefehler', 'Fehler beim Laden: Gespeicherte Daten sind beschädigt');
       return [];
     }
   }
@@ -110,6 +117,8 @@ export class ChartStorageService {
       }
     } catch (error) {
       console.error('Failed to create backup:', error);
+      console.error('Charts data that failed to backup:', charts);
+      this.toastService.showError('Backup-Fehler', 'Backup-Fehler: Automatisches Backup fehlgeschlagen');
       // Backup-Fehler soll normales Speichern nicht beeinträchtigen
     }
   }
