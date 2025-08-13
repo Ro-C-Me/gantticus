@@ -9,6 +9,7 @@ import { ChartStorageService } from './chart-storage.service';
 import { UndoRedoService } from './undo-redo.service';
 import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog/confirm-chart-delete-dialog.component';
 import { ActivatedRoute } from '@angular/router';
+import { ToastService } from './toast.service';
 
 @Component({
   selector: 'app-root',
@@ -33,8 +34,10 @@ onExpandChange(event: GanttItemInternal|GanttGroupInternal) {
   }
 }
 
-  // Toast-Benachrichtigungen
-  toasts: any[] = [];
+  // Toast-Benachrichtigungen über Service
+  get toasts() {
+    return this.toastService.getToasts();
+  }
 
   // Maximale Tiefe der Sub-Task-Hierarchie (konfigurierbar)
   maxHierarchyLevel: number = 5;
@@ -199,7 +202,8 @@ availableCharts: {
     private modalService: NgbModal, 
     private chartStorage: ChartStorageService, 
     private undoRedoService: UndoRedoService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private toastService: ToastService
   ) {
     this.initWithNewChart();
 
@@ -1286,35 +1290,21 @@ onGroupTitleClick(id: string) {
 
   // Toast-Benachrichtigungen
   showToast(header: string, body: string, type: 'success' | 'error' | 'info' = 'info') {
-    const toast = {
-      header,
-      body,
-      classname: this.getToastClass(type),
-      icon: this.getToastIcon(type)
-    };
-    this.toasts.push(toast);
+    switch (type) {
+      case 'success':
+        this.toastService.showSuccess(header, body);
+        break;
+      case 'error':
+        this.toastService.showError(header, body);
+        break;
+      case 'info':
+        this.toastService.showInfo(header, body);
+        break;
+    }
   }
 
   removeToast(toast: any) {
-    this.toasts = this.toasts.filter(t => t !== toast);
-  }
-
-  private getToastClass(type: string): string {
-    switch (type) {
-      case 'success': return 'bg-success text-light';
-      case 'error': return 'bg-danger text-light';
-      case 'info': return 'bg-info text-light';
-      default: return 'bg-light';
-    }
-  }
-
-  private getToastIcon(type: string): string {
-    switch (type) {
-      case 'success': return 'bi-check-circle-fill';
-      case 'error': return 'bi-exclamation-triangle-fill';
-      case 'info': return 'bi-info-circle-fill';
-      default: return 'bi-info-circle';
-    }
+    this.toastService.remove(toast);
   }
 
   // Hilfsmethode zur Prüfung, ob ein Task basierend auf Status-Filtern sichtbar ist
