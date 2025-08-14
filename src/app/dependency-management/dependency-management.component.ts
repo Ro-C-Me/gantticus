@@ -50,8 +50,12 @@ export class DependencyManagementComponent implements OnInit {
       return;
     }
 
-    // Neue Abhängigkeit hinzufügen
-    this.dependencies = [...this.dependencies, { taskId: this.selectedTaskId, type: this.selectedType }];
+    // Neue Dependency-Instanz erstellen (nicht Plain Object)
+    const dependency = new Dependency();
+    dependency.taskId = this.selectedTaskId;
+    dependency.type = this.selectedType;
+
+    this.dependencies = [...this.dependencies, dependency];
     this.dependenciesChange.emit(this.dependencies);
   }
 
