@@ -659,6 +659,9 @@ onGroupTitleClick(id: string) {
     let childTaskIds = new Set<string>();
     let requiresDefaultGroup = false;
     
+    // Lokaler Cache nur für diese Berechnung
+    const computedPropertiesCache = new Map<string, boolean>();
+    
     // Gefilterte Tasks verwenden statt this.chart.tasks
     const filteredTasks = this.getFilteredTasks();
     
@@ -685,10 +688,9 @@ onGroupTitleClick(id: string) {
       // Standardmäßig sind alle Tasks geschlossen, außer sie stehen in der expanded-Liste
       item.expanded = this.chart.expanded.has(t.id);
       
-      // Start und End berechnen basierend auf computeFromChildren
+      // Start und End berechnen basierend auf computeFromChildren (jetzt rekursiv)
       if (t.computeFromChildren && t.children && t.children.length > 0) {
-        const childTasks = t.children.map(childId => this.getTaskById(childId)).filter(child => child !== undefined) as Task[];
-        const computedDates = this.computeScheduleFromChildren(childTasks);
+        const computedDates = this.computePropertiesFromChildren(t, computedPropertiesCache);
         item.start = computedDates.start;
         item.end = computedDates.end;
       } else {
@@ -1269,7 +1271,69 @@ onGroupTitleClick(id: string) {
     return div.textContent || div.innerText || '';
   }
 
-  // Hilfsmethode: Berechnet Start/End-Zeiten aus Sub-Tasks
+
+
+  // Hilfsmethode: Berechnet Properties aus Sub-Tasks (mit rekursiver Unterstützung)
+  private computePropertiesFromChildren(task: Task, cache: Map<string, boolean>): { start?: Date, end?: Date } {
+    // Cache prüfen - wenn bereits berechnet, direkt zurückgeben
+    if (cache.has(task.id)) {
+      return {
+        start: task.computedStart,
+        end: task.computedEnd
+      };
+    }
+
+    // Wenn der Task keine Kinder hat oder nicht aus Kindern berechnet werden soll
+    if (!task.computeFromChildren || !task.children || task.children.length === 0) {
+      // Als berechnet markieren (auch wenn keine Berechnung nötig war)
+      cache.set(task.id, true);
+      return {
+        start: task.start,
+        end: task.end
+      };
+    }
+
+    // Child-Tasks holen
+    const childTasks = task.children
+      .map(childId => this.getTaskById(childId))
+      .filter(child => child !== undefined) as Task[];
+
+    // Rekursiv alle Child-Tasks zuerst berechnen
+    for (const childTask of childTasks) {
+      if (childTask.computeFromChildren && !cache.has(childTask.id)) {
+        const childResult = this.computePropertiesFromChildren(childTask, cache);
+        // Berechnete Werte im Child-Task speichern
+        childTask.computedStart = childResult.start;
+        childTask.computedEnd = childResult.end;
+      }
+    }
+
+    // Jetzt die finalen Zeiten der Kinder sammeln
+    const validStarts = childTasks
+      .map(child => child.start || child.computedStart)
+      .filter(date => date !== undefined && date !== null) as Date[];
+    
+    const validEnds = childTasks
+      .map(child => child.end || child.computedEnd)
+      .filter(date => date !== undefined && date !== null) as Date[];
+    
+    const earliestStart = validStarts.length > 0 ? new Date(Math.min(...validStarts.map(d => d.getTime()))) : undefined;
+    const latestEnd = validEnds.length > 0 ? new Date(Math.max(...validEnds.map(d => d.getTime()))) : undefined;
+
+    // Als berechnet markieren
+    cache.set(task.id, true);
+    
+    // Berechnete Werte im Task speichern
+    task.computedStart = earliestStart;
+    task.computedEnd = latestEnd;
+    
+    return {
+      start: earliestStart,
+      end: latestEnd
+    };
+  }
+
+  // Legacy-Methode für Rückwärtskompatibilität (falls noch wo anders verwendet)
   private computeScheduleFromChildren(childTasks: Task[]): { start?: Date, end?: Date } {
     const validStarts = childTasks
       .map(child => child.start || child.computedStart)
