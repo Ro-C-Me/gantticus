@@ -5,3 +5,12 @@
   .task-status i:hover {
     color: #0056b3; /* Hover color */
   }
+
+  // Styling für abgeleitete Tasks
+  .task-status.derived-status {
+    opacity: 0.7; /* Leicht transparent um zu zeigen, dass es nicht interaktiv ist */
+  }
+
+  .task-status.derived-status i:hover {
+    color: inherit; /* Hover-Effekt für abgeleitete Tasks deaktivieren */
+  }

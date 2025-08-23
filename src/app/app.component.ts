@@ -1274,12 +1274,13 @@ onGroupTitleClick(id: string) {
 
 
   // Hilfsmethode: Berechnet Properties aus Sub-Tasks (mit rekursiver Unterstützung)
-  private computePropertiesFromChildren(task: Task, cache: Map<string, boolean>): { start?: Date, end?: Date } {
+  private computePropertiesFromChildren(task: Task, cache: Map<string, boolean>): { start?: Date, end?: Date, status?: Status } {
     // Cache prüfen - wenn bereits berechnet, direkt zurückgeben
     if (cache.has(task.id)) {
       return {
         start: task.computedStart,
-        end: task.computedEnd
+        end: task.computedEnd,
+        status: task.status
       };
     }
 
@@ -1289,7 +1290,8 @@ onGroupTitleClick(id: string) {
       cache.set(task.id, true);
       return {
         start: task.start,
-        end: task.end
+        end: task.end,
+        status: task.status
       };
     }
 
@@ -1305,6 +1307,10 @@ onGroupTitleClick(id: string) {
         // Berechnete Werte im Child-Task speichern
         childTask.computedStart = childResult.start;
         childTask.computedEnd = childResult.end;
+        // Status wird direkt im Task gespeichert, da er berechnet wurde
+        if (childResult.status !== undefined) {
+          childTask.status = childResult.status;
+        }
       }
     }
 
@@ -1320,17 +1326,75 @@ onGroupTitleClick(id: string) {
     const earliestStart = validStarts.length > 0 ? new Date(Math.min(...validStarts.map(d => d.getTime()))) : undefined;
     const latestEnd = validEnds.length > 0 ? new Date(Math.max(...validEnds.map(d => d.getTime()))) : undefined;
 
+    // Status aus Kindern berechnen
+    const computedStatus = this.computeStatusFromChildren(childTasks);
+
     // Als berechnet markieren
     cache.set(task.id, true);
     
     // Berechnete Werte im Task speichern
     task.computedStart = earliestStart;
     task.computedEnd = latestEnd;
+    task.status = computedStatus;
     
     return {
       start: earliestStart,
-      end: latestEnd
+      end: latestEnd,
+      status: computedStatus
     };
+  }
+
+  // Berechnet den Status eines Parent-Tasks basierend auf seinen Kind-Tasks
+  private computeStatusFromChildren(childTasks: Task[]): Status {
+    if (!childTasks || childTasks.length === 0) {
+      return Status.OPEN; // Default-Status wenn keine Kinder vorhanden
+    }
+
+    // Status-Logik implementieren:
+    // 1. Alle Kinder OPEN → Parent OPEN
+    // 2. Mindestens ein Kind IN_PROGRESS → Parent IN_PROGRESS
+    // 3. Mindestens ein Kind DONE oder ARCHIVED (aber nicht alle) → Parent IN_PROGRESS
+    // 4. Alle Kinder DONE oder ARCHIVED (und mindestens ein DONE) → Parent DONE
+    // 5. Alle Kinder ARCHIVED → Parent ARCHIVED
+
+    const statusCounts = {
+      [Status.OPEN]: 0,
+      [Status.IN_PROGRESS]: 0,
+      [Status.DONE]: 0,
+      [Status.ARCHIVED]: 0
+    };
+
+    // Status der Kinder zählen
+    for (const child of childTasks) {
+      statusCounts[child.status]++;
+    }
+
+    const totalChildren = childTasks.length;
+
+    // Regel 5: Alle Kinder ARCHIVED → Parent ARCHIVED
+    if (statusCounts[Status.ARCHIVED] === totalChildren) {
+      return Status.ARCHIVED;
+    }
+
+    // Regel 2: Mindestens ein Kind IN_PROGRESS → Parent IN_PROGRESS
+    if (statusCounts[Status.IN_PROGRESS] > 0) {
+      return Status.IN_PROGRESS;
+    }
+
+    // Regel 4: Alle Kinder DONE oder ARCHIVED (und mindestens ein DONE) → Parent DONE
+    const doneOrArchivedCount = statusCounts[Status.DONE] + statusCounts[Status.ARCHIVED];
+    if (doneOrArchivedCount === totalChildren && statusCounts[Status.DONE] > 0) {
+      return Status.DONE;
+    }
+
+    // Regel 3: Mindestens ein Kind DONE oder ARCHIVED (aber nicht alle) → Parent IN_PROGRESS
+    // Das bedeutet: Sobald irgendein Kind fertig ist, ist der Parent in Bearbeitung
+    if (statusCounts[Status.DONE] > 0 || statusCounts[Status.ARCHIVED] > 0) {
+      return Status.IN_PROGRESS;
+    }
+
+    // Regel 1: Alle Kinder OPEN → Parent OPEN
+    return Status.OPEN;
   }
 
   // Legacy-Methode für Rückwärtskompatibilität (falls noch wo anders verwendet)

@@ -1,4 +1,8 @@
-<div class="task-status" (click)="changeStatus($event)" style="cursor: pointer;">
+<div class="task-status" 
+     (click)="changeStatus($event)" 
+     [style.cursor]="isTaskDerived() ? 'default' : 'pointer'"
+     [class.derived-status]="isTaskDerived()"
+     [attr.title]="isTaskDerived() ? 'Status wird automatisch aus Unter-Tasks berechnet' : ''">
     <!-- Render the icon based on the current status -->
      @switch (status) {
      @case ('OPEN') { <i class="bi bi-circle" title="Open"></i>}
@@ -18,7 +22,7 @@
             container="body"
             (mouseenter)="showProgress && popover.open()"
             (mouseleave)="popover.close()"
-            (wheel)="changeProgress($event)"
+            (wheel)="!isTaskDerived() && changeProgress($event)"
           ></i>
     }
      @case ('DONE') { <i class="bi bi-check-circle" title="Abgeschlossen"></i>}

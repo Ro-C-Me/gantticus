@@ -39,6 +39,14 @@ export class TaskStatusComponent {
 
   changeProgress($event: WheelEvent) {
     $event.preventDefault(); // Verhindert das Scrollen der Seite
+    
+    // Prüfen ob dieser Task von seinen Kindern abgeleitet wird
+    if (this.isTaskDerived()) {
+      // Für abgeleitete Tasks keine Progress-Änderung erlauben
+      this.validationError.emit('Der Fortschritt dieses Tasks wird automatisch aus seinen Unter-Tasks berechnet und kann nicht manuell geändert werden.');
+      return;
+    }
+    
     const step = 0.05; // Schrittweite, z.B. 2 Prozent pro "Klick"
     if ($event.deltaY < 0) {
       // Mausrad nach oben: Fortschritt erhöhen
@@ -61,6 +69,13 @@ export class TaskStatusComponent {
   changeStatus(event: MouseEvent): void {
     event.stopPropagation();
     
+    // Prüfen ob dieser Task von seinen Kindern abgeleitet wird
+    if (this.isTaskDerived()) {
+      // Für abgeleitete Tasks keine Statusänderung erlauben
+      this.validationError.emit('Der Status dieses Tasks wird automatisch aus seinen Unter-Tasks berechnet und kann nicht manuell geändert werden.');
+      return;
+    }
+    
     const newStatus = this.getNextStatus(this.status);
     
     // Validation BEVOR die Änderung gemacht wird
@@ -79,6 +94,11 @@ export class TaskStatusComponent {
     }
     
     this.statusChange.emit(this.status);
+  }
+
+  // Prüft ob der Status dieses Tasks aus seinen Kindern abgeleitet wird
+  isTaskDerived(): boolean {
+    return this.task?.computeFromChildren === true;
   }
 
   private getNextStatus(currentStatus: Status): Status {
