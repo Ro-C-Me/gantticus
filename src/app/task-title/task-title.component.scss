@@ -40,3 +40,30 @@
 .task-action-overlay i.bi-arrow-clockwise {
   background: #28a745; /* Grün für Wiederherstellen */
 }
+
+/* Link-Styles für Task-Titel */
+.task-title-container a {
+  color: inherit; /* Verwendet die Textfarbe des Elternelements */
+  text-decoration: none; /* Entfernt die Unterstreichung */
+  cursor: pointer; /* Behält den Zeiger-Cursor */
+  transition: color 0.2s, text-decoration 0.2s; /* Sanfte Übergänge */
+}
+
+.task-title-container a:hover {
+  color: #0066cc; /* Blau beim Hover um URL zu signalisieren */
+  text-decoration: underline; /* Unterstreichung beim Hover */
+}
+
+.task-title-container a:visited {
+  color: inherit; /* Behält die Farbe für besuchte Links */
+}
+
+.task-title-container a:visited:hover {
+  color: #0066cc; /* Auch besuchte Links werden beim Hover blau */
+  text-decoration: underline;
+}
+
+.task-title-container a:focus {
+  color: inherit; /* Behält die Farbe beim Focus */
+  outline: none; /* Entfernt den Standard-Focus-Rahmen */
+}
