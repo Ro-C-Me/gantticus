@@ -1274,13 +1274,14 @@ onGroupTitleClick(id: string) {
 
 
   // Hilfsmethode: Berechnet Properties aus Sub-Tasks (mit rekursiver Unterstützung)
-  private computePropertiesFromChildren(task: Task, cache: Map<string, boolean>): { start?: Date, end?: Date, status?: Status } {
+  private computePropertiesFromChildren(task: Task, cache: Map<string, boolean>): { start?: Date, end?: Date, status?: Status, progress?: number } {
     // Cache prüfen - wenn bereits berechnet, direkt zurückgeben
     if (cache.has(task.id)) {
       return {
         start: task.computedStart,
         end: task.computedEnd,
-        status: task.status
+        status: task.status,
+        progress: task.progress
       };
     }
 
@@ -1291,7 +1292,8 @@ onGroupTitleClick(id: string) {
       return {
         start: task.start,
         end: task.end,
-        status: task.status
+        status: task.status,
+        progress: task.progress
       };
     }
 
@@ -1311,6 +1313,10 @@ onGroupTitleClick(id: string) {
         if (childResult.status !== undefined) {
           childTask.status = childResult.status;
         }
+        // Progress wird direkt im Task gespeichert, da er berechnet wurde
+        if (childResult.progress !== undefined) {
+          childTask.progress = childResult.progress;
+        }
       }
     }
 
@@ -1329,6 +1335,9 @@ onGroupTitleClick(id: string) {
     // Status aus Kindern berechnen
     const computedStatus = this.computeStatusFromChildren(childTasks);
 
+    // Progress aus Kindern berechnen (gewichtet nach Dauer)
+    const computedProgress = this.computeProgressFromChildren(childTasks);
+
     // Als berechnet markieren
     cache.set(task.id, true);
     
@@ -1336,11 +1345,13 @@ onGroupTitleClick(id: string) {
     task.computedStart = earliestStart;
     task.computedEnd = latestEnd;
     task.status = computedStatus;
+    task.progress = computedProgress;
     
     return {
       start: earliestStart,
       end: latestEnd,
-      status: computedStatus
+      status: computedStatus,
+      progress: computedProgress
     };
   }
 
@@ -1414,6 +1425,63 @@ onGroupTitleClick(id: string) {
       start: earliestStart,
       end: latestEnd
     };
+  }
+
+  // Berechnet den gewichteten Fortschritt eines Parent-Tasks basierend auf seinen Kind-Tasks
+  private computeProgressFromChildren(childTasks: Task[]): number {
+    if (!childTasks || childTasks.length === 0) {
+      return 0.0; // Default-Progress wenn keine Kinder vorhanden
+    }
+
+    let totalWeightedProgress = 0;
+    let totalWeight = 0;
+
+    for (const child of childTasks) {
+      // Dauer des Child-Tasks berechnen (inklusive, also Ende - Start + 1 Tag)
+      const duration = this.calculateTaskDurationInDays(child);
+      
+      // Tasks ohne gültige Dauer werden ignoriert
+      if (duration <= 0) {
+        continue;
+      }
+      
+      // Gewichteten Fortschritt hinzufügen
+      totalWeightedProgress += child.progress * duration;
+      totalWeight += duration;
+    }
+
+    // Wenn alle Child-Tasks keine gültige Dauer haben, Fallback auf 0
+    if (totalWeight === 0) {
+      return 0.0;
+    }
+
+    // Gewichteten Durchschnitt berechnen
+    return totalWeightedProgress / totalWeight;
+  }
+
+  // Hilfsmethode: Berechnet die Dauer eines Tasks in Tagen (inklusive)
+  private calculateTaskDurationInDays(task: Task): number {
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+
+    // Für Tasks mit computeFromChildren die berechneten Daten verwenden
+    if (task.computeFromChildren) {
+      startDate = task.computedStart;
+      endDate = task.computedEnd;
+    } else {
+      startDate = task.start;
+      endDate = task.end;
+    }
+
+    // Wenn Start oder Ende fehlen, keine gültige Dauer
+    if (!startDate || !endDate) {
+      return 0;
+    }
+
+    // Inklusive Berechnung: Ende - Start + 1 Tag
+    const timeDiff = endDate.getTime() - startDate.getTime();
+    const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    return daysDiff + 1; // +1 für inklusive Zählung
   }
 
   // Toast-Benachrichtigungen
