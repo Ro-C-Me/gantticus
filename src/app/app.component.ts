@@ -1428,6 +1428,7 @@ onGroupTitleClick(id: string) {
   }
 
   // Berechnet den gewichteten Fortschritt eines Parent-Tasks basierend auf seinen Kind-Tasks
+  // Verwendet Arbeitsvolumen-basierte Berechnung: Summe aller individuellen Child-Dauern
   private computeProgressFromChildren(childTasks: Task[]): number {
     if (!childTasks || childTasks.length === 0) {
       return 0.0; // Default-Progress wenn keine Kinder vorhanden
@@ -1437,8 +1438,8 @@ onGroupTitleClick(id: string) {
     let totalWeight = 0;
 
     for (const child of childTasks) {
-      // Dauer des Child-Tasks berechnen (inklusive, also Ende - Start + 1 Tag)
-      const duration = this.calculateTaskDurationInDays(child);
+      // Arbeitsvolumen-basiert: Immer die individuelle Task-Dauer verwenden
+      const duration = this.calculateIndividualTaskDurationInDays(child);
       
       // Tasks ohne gültige Dauer werden ignoriert
       if (duration <= 0) {
@@ -1472,6 +1473,37 @@ onGroupTitleClick(id: string) {
       startDate = task.start;
       endDate = task.end;
     }
+
+    // Wenn Start oder Ende fehlen, keine gültige Dauer
+    if (!startDate || !endDate) {
+      return 0;
+    }
+
+    // Inklusive Berechnung: Ende - Start + 1 Tag
+    const timeDiff = endDate.getTime() - startDate.getTime();
+    const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    return daysDiff + 1; // +1 für inklusive Zählung
+  }
+
+  // Hilfsmethode: Berechnet die individuelle Dauer eines Tasks in Tagen (inklusive)
+  // Für computeFromChildren-Tasks: Summe aller Child-Dauern
+  // Für normale Tasks: Direkte start/end-Daten
+  private calculateIndividualTaskDurationInDays(task: Task): number {
+    // Für Tasks mit computeFromChildren: Summe aller Child-Dauern verwenden (arbeitsvolumen-basiert)
+    if (task.computeFromChildren && task.children && task.children.length > 0) {
+      let totalChildDuration = 0;
+      for (const childId of task.children) {
+        const childTask = this.getTaskById(childId);
+        if (childTask) {
+          totalChildDuration += this.calculateIndividualTaskDurationInDays(childTask); // Rekursiv
+        }
+      }
+      return totalChildDuration;
+    }
+    
+    // Für normale Tasks: Direkte start/end-Daten verwenden
+    const startDate = task.start;
+    const endDate = task.end;
 
     // Wenn Start oder Ende fehlen, keine gültige Dauer
     if (!startDate || !endDate) {
