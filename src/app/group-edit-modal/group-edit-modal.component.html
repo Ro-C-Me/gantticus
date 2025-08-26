@@ -14,6 +14,14 @@
       </div>
 
       <div class="mb-3">
+        <label for="url" class="form-label">URL</label>
+        <input id="url" type="url" class="form-control" formControlName="url" />
+        <div *ngIf="groupForm.get('url')?.invalid && groupForm.get('url')?.touched" class="text-danger">
+          Ungültige URL
+        </div>
+      </div>
+
+      <div class="mb-3">
         <app-color-selection 
           [(selectedColor)]="selectedColor" 
           [useColor]="groupForm.value.useColor"
@@ -28,4 +36,3 @@
     <button type="button" class="btn btn-secondary" (click)="onCancel()">Abbrechen</button>
     <button type="button" class="btn btn-primary" (click)="onOk()">OK</button>
   </div>
-  

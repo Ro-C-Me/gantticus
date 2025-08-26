@@ -17,6 +17,14 @@ export class GroupTitleComponent {
 
   showIcons = false;
 
+  hasUrl(): boolean {
+    return !!(this.item.origin as any)?.url?.trim();
+  }
+
+  getUrl(): string {
+    return (this.item.origin as any)?.url || '';
+  }
+
   onTitleClick(event: MouseEvent) {
     event.stopPropagation();
     this.clicked.emit(this.item);

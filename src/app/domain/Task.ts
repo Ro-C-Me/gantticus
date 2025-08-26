@@ -96,6 +96,9 @@ export class Task {
     title: string = '';
 
     @jsonMember
+    url: string = '';
+
+    @jsonMember
     color?: string;
 
   }
