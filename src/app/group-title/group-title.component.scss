@@ -1,0 +1,26 @@
+/* Link-Styles für Gruppen-Titel */
+.group-title-container a {
+  color: inherit; /* Verwendet die Textfarbe des Elternelements */
+  text-decoration: none; /* Entfernt die Unterstreichung */
+  cursor: pointer; /* Behält den Zeiger-Cursor */
+  transition: color 0.2s, text-decoration 0.2s; /* Sanfte Übergänge */
+}
+
+.group-title-container a:hover {
+  color: #0066cc; /* Blau beim Hover um URL zu signalisieren */
+  text-decoration: underline; /* Unterstreichung beim Hover */
+}
+
+.group-title-container a:visited {
+  color: inherit; /* Behält die Farbe für besuchte Links */
+}
+
+.group-title-container a:visited:hover {
+  color: #0066cc; /* Auch besuchte Links werden beim Hover blau */
+  text-decoration: underline;
+}
+
+.group-title-container a:focus {
+  color: inherit; /* Behält die Farbe beim Focus */
+  outline: none; /* Entfernt den Standard-Focus-Rahmen */
+}

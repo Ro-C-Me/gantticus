@@ -24,6 +24,7 @@ export class GroupEditModalComponent {
   ngOnInit() {
     this.groupForm = this.fb.group({
       title: [this.group.title, Validators.required],
+      url: [this.group.url],
       useColor: [!!this.group.color],
       color: [this.group.color || '#6698FF']
     });
@@ -52,6 +53,7 @@ export class GroupEditModalComponent {
 
     // Änderungen übernehmen
     this.group.title = this.groupForm.value.title;
+    this.group.url = this.groupForm.value.url;
     if (this.groupForm.value.useColor) {
       this.group.color = this.selectedColor;
     }

@@ -1,5 +1,8 @@
-<span (mouseenter)="showIcons = true" (mouseleave)="showIcons = false">
-    <span (click)="onTitleClick($event)">{{ item.title }}</span>
+<span (mouseenter)="showIcons = true" (mouseleave)="showIcons = false" class="group-title-container">
+    <a *ngIf="hasUrl()" target="_blank" [href]="getUrl()" rel="noopener" [title]="getUrl()" (click)="$event.stopPropagation()">
+      {{ item.title }}
+    </a>
+    <span *ngIf="!hasUrl()" (click)="onTitleClick($event)">{{ item.title }}</span>
     <i *ngIf="showIcons" class="bi bi-trash text-danger" style="margin-left: 0.5rem;" (click)="onDeleteClick($event)"></i>
     <i *ngIf="showIcons" class="bi bi-plus text-primary" style="margin-left: 0.5rem;" (click)="onAddClick($event)"></i>
   </span>
