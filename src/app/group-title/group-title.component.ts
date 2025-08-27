@@ -30,6 +30,11 @@ export class GroupTitleComponent {
     this.clicked.emit(this.item);
   }
 
+  onLinkClick(event: MouseEvent) {
+    event.stopPropagation();
+    window.open(this.getUrl(), '_blank', 'noopener');
+  }
+
   onDeleteClick(event: MouseEvent) {
     event.stopPropagation();
     this.deleted.emit(this.item);
