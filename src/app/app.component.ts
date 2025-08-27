@@ -702,6 +702,12 @@ onGroupTitleClick(id: string) {
         item.color = t.color;
       } else if (t.group &&  this.getGroupById(t.group)) {
         item.color = this.getGroupById(t.group)!.color;
+      } else {
+        // Für Sub-Tasks: Farbe des Parent-Tasks (bzw. seiner Gruppe) verwenden
+        const parentGroup = this.getParentGroupForTask(t.id);
+        if (parentGroup) {
+          item.color = parentGroup.color;
+        }
       }
       if (t.group) {
         item.group_id = t.group;
@@ -1554,5 +1560,25 @@ onGroupTitleClick(id: string) {
       default:
         return true; // Fallback für unbekannte Status
     }
+  }
+
+  // Hilfsmethode: Findet die Gruppe eines Parent-Tasks für einen Sub-Task
+  private getParentGroupForTask(taskId: string): Group | undefined {
+    // Parent-Task finden
+    const parentTask = this.chart.tasks.find(task => 
+      task.children && task.children.includes(taskId)
+    );
+    
+    if (!parentTask) {
+      return undefined; // Kein Parent gefunden
+    }
+    
+    // Gruppe des Parent-Tasks zurückgeben
+    if (parentTask.group) {
+      return this.getGroupById(parentTask.group);
+    }
+    
+    // Wenn Parent auch keine direkte Gruppe hat, rekursiv weiter suchen
+    return this.getParentGroupForTask(parentTask.id);
   }
 }
