@@ -18,7 +18,8 @@ import { ToastService } from './toast.service';
   standalone: false
 })
 export class AppComponent implements OnInit {
-onExpandChange(event: GanttItemInternal|GanttGroupInternal) {
+  
+onExpandChange(event: GanttItemInternal | GanttGroupInternal | (GanttItemInternal | GanttGroupInternal)[]) {
   console.log("Expand change event:", event);
   
   // Prüfen ob es sich um ein Item oder eine Gruppe handelt
