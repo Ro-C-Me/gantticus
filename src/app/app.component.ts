@@ -10,6 +10,7 @@ import { UndoRedoService } from './undo-redo.service';
 import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog/confirm-chart-delete-dialog.component';
 import { ActivatedRoute } from '@angular/router';
 import { ToastService } from './toast.service';
+import { TaskFilterPipe } from './pipes/task-filter.pipe';
 
 @Component({
   selector: 'app-root',
@@ -18,7 +19,7 @@ import { ToastService } from './toast.service';
   standalone: false
 })
 export class AppComponent implements OnInit {
-  
+
 onExpandChange(event: GanttItemInternal | GanttGroupInternal | (GanttItemInternal | GanttGroupInternal)[]) {
   console.log("Expand change event:", event);
   
@@ -45,6 +46,9 @@ onExpandChange(event: GanttItemInternal | GanttGroupInternal | (GanttItemInterna
 
   // Maximale Tiefe der Sub-Task-Hierarchie (konfigurierbar)
   maxHierarchyLevel: number = 5;
+
+  // Pipe-Instanz für die Filterlogik
+  private taskFilterPipe = new TaskFilterPipe();
 
   isOverdue(task: Task) : boolean{
     if (!task.end) {
@@ -201,6 +205,11 @@ availableCharts: {
   hasUnsavedChanges = false;
 
   // Filter-Properties sind jetzt in chart.filter enthalten
+  
+  // Computed property für gefilterte Tasks
+  get filteredTasks(): Task[] {
+    return this.taskFilterPipe.transform(this.chart.tasks, this.chart.filter);
+  }
   
   constructor(
     private modalService: NgbModal, 
@@ -666,8 +675,8 @@ onGroupTitleClick(id: string) {
     // Lokaler Cache nur für diese Berechnung
     const computedPropertiesCache = new Map<string, boolean>();
     
-    // Gefilterte Tasks verwenden statt this.chart.tasks
-    const filteredTasks = this.getFilteredTasks();
+    // Gefilterte Tasks über Pipe verwenden
+    const filteredTasks = this.filteredTasks;
     
     // Erst alle Child-Task-IDs sammeln (nur von gefilterten Tasks)
     filteredTasks.forEach(t => {
@@ -895,115 +904,6 @@ onGroupTitleClick(id: string) {
     this.chart.filter.showDoneTasks = true;
     this.chart.filter.showArchivedTasks = false;
     this.updateGanttItems();
-  }
-
-  private getFilteredTasks(): Task[] {
-    // Basis-Tasks durch Textfilter ermitteln
-    let filteredTaskIds = new Set<string>();
-    const parentTaskIds = new Set<string>();
-
-    if (!this.chart.filter.taskFilter || this.chart.filter.taskFilter.trim() === '') {
-      // Wenn kein Textfilter, aber Dependencies aktiviert, alle Tasks als Basis nehmen
-      if (this.chart.filter.showDownstreamDeps || this.chart.filter.showUpstreamDeps) {
-        this.chart.tasks.forEach(task => filteredTaskIds.add(task.id));
-      } else {
-        // Status-Filter anwenden
-        return this.chart.tasks.filter(task => this.isTaskStatusVisible(task));
-      }
-    } else {
-      const filterText = this.chart.filter.taskFilter.toLowerCase().trim();
-
-      // Ersten Durchgang: Direkte Treffer finden
-      this.chart.tasks.forEach(task => {
-        if (task.title.toLowerCase().includes(filterText)) {
-          filteredTaskIds.add(task.id);
-        }
-      });
-
-      // Zweiten Durchgang: Parent-Tasks von gefilterten Child-Tasks finden
-      this.chart.tasks.forEach(task => {
-        if (task.children && task.children.length > 0) {
-          const hasMatchingChild = task.children.some(childId => {
-            const childTask = this.chart.tasks.find(t => t.id === childId);
-            return childTask && childTask.title.toLowerCase().includes(filterText);
-          });
-          if (hasMatchingChild) {
-            parentTaskIds.add(task.id);
-            // Child-Tasks hinzufügen, die den Filter erfüllen
-            task.children.forEach(childId => {
-              const childTask = this.chart.tasks.find(t => t.id === childId);
-              if (childTask && childTask.title.toLowerCase().includes(filterText)) {
-                filteredTaskIds.add(childId);
-              }
-            });
-          }
-        }
-      });
-    // Alle gefilterten Task-IDs kombinieren
-    filteredTaskIds = new Set([...filteredTaskIds, ...parentTaskIds]);
-  }
-
-  // Erweiterung NUR in der jeweiligen Richtung, ausgehend von der Textsuche
-  let resultIds = new Set(filteredTaskIds);
-  if (this.chart.filter.showDownstreamDeps) {
-    const downstreamIds = this.getDownstreamDependencies(filteredTaskIds);
-    downstreamIds.forEach(id => resultIds.add(id));
-  }
-  if (this.chart.filter.showUpstreamDeps) {
-    const upstreamIds = this.getUpstreamDependencies(filteredTaskIds);
-    upstreamIds.forEach(id => resultIds.add(id));
-  }    let filtered = this.chart.tasks.filter(task => resultIds.has(task.id));
-    // Status-Filter anwenden
-    filtered = filtered.filter(task => this.isTaskStatusVisible(task));
-    return filtered;
-  }
-
-  private getDownstreamDependencies(taskIds: Set<string>): Set<string> {
-    const downstreamIds = new Set<string>();
-    const visited = new Set<string>();
-
-    // Downstream: Finde alle Tasks, die von den gefilterten Tasks direkt oder indirekt abhängen
-    const findDependents = (sourceTaskId: string) => {
-      if (visited.has(sourceTaskId)) return;
-      visited.add(sourceTaskId);
-
-      // Alle Tasks durchsuchen, die eine Dependency auf sourceTaskId haben
-      this.chart.tasks.forEach(task => {
-        if (task.dependencies && task.dependencies.some(dep => dep.taskId === sourceTaskId)) {
-          if (!downstreamIds.has(task.id)) {
-            downstreamIds.add(task.id);
-            findDependents(task.id); // Rekursiv weiter suchen
-          }
-        }
-      });
-    };
-
-    taskIds.forEach(taskId => findDependents(taskId));
-    return downstreamIds;
-  }
-
-  private getUpstreamDependencies(taskIds: Set<string>): Set<string> {
-    const upstreamIds = new Set<string>();
-    const visited = new Set<string>();
-
-    // Upstream: Finde alle Tasks, von denen die gefilterten Tasks direkt oder indirekt abhängen
-    const findBlockers = (taskId: string) => {
-      if (visited.has(taskId)) return;
-      visited.add(taskId);
-
-      const task = this.chart.tasks.find(t => t.id === taskId);
-      if (task && task.dependencies) {
-        task.dependencies.forEach(dep => {
-          if (!upstreamIds.has(dep.taskId)) {
-            upstreamIds.add(dep.taskId);
-            findBlockers(dep.taskId); // Rekursiv weiter suchen
-          }
-        });
-      }
-    };
-
-    taskIds.forEach(taskId => findBlockers(taskId));
-    return upstreamIds;
   }
 
   // Speichert den aktuellen Zustand für Undo
@@ -1550,27 +1450,6 @@ onGroupTitleClick(id: string) {
 
   removeToast(toast: any) {
     this.toastService.remove(toast);
-  }
-
-  // Hilfsmethode zur Prüfung, ob ein Task basierend auf Status-Filtern sichtbar ist
-  private isTaskStatusVisible(task: Task): boolean {
-    // Wenn alle Status-Filter deaktiviert sind, alle Tasks anzeigen
-    if (!this.chart.filter.showOpenTasks && !this.chart.filter.showInProgressTasks && !this.chart.filter.showDoneTasks && !this.chart.filter.showArchivedTasks) {
-      return true;
-    }
-    
-    switch (task.status) {
-      case Status.OPEN:
-        return this.chart.filter.showOpenTasks;
-      case Status.IN_PROGRESS:
-        return this.chart.filter.showInProgressTasks;
-      case Status.DONE:
-        return this.chart.filter.showDoneTasks;
-      case Status.ARCHIVED:
-        return this.chart.filter.showArchivedTasks;
-      default:
-        return true; // Fallback für unbekannte Status
-    }
   }
 
   // Hilfsmethode: Findet die Gruppe eines Parent-Tasks für einen Sub-Task

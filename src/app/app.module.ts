@@ -14,12 +14,14 @@ import localeDe from '@angular/common/locales/de';
 import localeEn from '@angular/common/locales/en';
 import { registerLocaleData } from '@angular/common';
 import { TaskStatusComponent } from "./task-status/task-status.component";
+import { TaskFilterPipe } from './pipes/task-filter.pipe';
 
 registerLocaleData(localeDe, 'de');
 registerLocaleData(localeEn, 'en');
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    TaskFilterPipe
     ],
   imports: [
     RouterModule.forRoot(routes),
