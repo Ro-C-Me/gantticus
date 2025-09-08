@@ -1,0 +1,18 @@
+/* Gantt Chart Komponente Styles */
+
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.debug-info {
+  padding: 10px;
+  background-color: yellow;
+  margin: 10px 0;
+}
+
+ngx-gantt {
+  height: 100%;
+  width: 100%;
+}

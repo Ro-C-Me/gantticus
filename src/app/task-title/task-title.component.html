@@ -1,9 +1,5 @@
-<div class="task-title-container">
-  <a *ngIf="hasUrl()" target="_blank" [href]="getUrl()" rel="noopener" [title]="getUrl()" (click)="$event.stopPropagation()">
-    {{ item.title }}
-  </a>
-  <span *ngIf="!hasUrl()">{{ item.title }}</span>
-  <div class="task-action-overlay">
-    <i class="bi bi-trash" (click)="onDeleteClick()"></i>
-  </div>
-</div>
+<span (mouseenter)="showIcons = true" (mouseleave)="showIcons = false" class="task-title-container">
+  <span (click)="onTitleClick($event)" [title]="'Klicken zum Bearbeiten'">{{ item.title }}</span>
+  <i *ngIf="showIcons && hasUrl()" class="bi bi-link-45deg text-secondary" style="margin-left: 0.5rem;" (click)="onLinkClick($event)" [title]="getUrl()"></i>
+  <i *ngIf="showIcons" class="bi bi-trash text-danger" style="margin-left: 0.5rem;" (click)="onDeleteClick($event)"></i>
+</span>
