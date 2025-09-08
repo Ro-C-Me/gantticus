@@ -11,6 +11,12 @@ import { Task, Status } from '../domain/Task';
   styleUrl: './task-title.component.scss'
 })
 export class TaskTitleComponent {
+  @Input() item!: GanttItem;
+  @Output() deleted = new EventEmitter<GanttItem>();
+  @Output() clicked = new EventEmitter<GanttItem>();
+
+  showIcons = false;
+
   getUrl() {
     if (this.item.origin instanceof Task) {
       return this.item.origin.ticketUrl;
@@ -31,10 +37,18 @@ export class TaskTitleComponent {
     }
   }
 
-  @Input() item!: GanttItem;
-  @Output() deleted = new EventEmitter<GanttItem>();
+  onTitleClick(event: MouseEvent) {
+    event.stopPropagation();
+    this.clicked.emit(this.item);
+  }
 
-  onDeleteClick() {
+  onLinkClick(event: MouseEvent) {
+    event.stopPropagation();
+    window.open(this.getUrl(), '_blank', 'noopener');
+  }
+
+  onDeleteClick(event: MouseEvent) {
+    event.stopPropagation();
     this.deleted.emit(this.item);
   }
 }

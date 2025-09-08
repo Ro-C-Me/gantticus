@@ -15,13 +15,15 @@ import localeEn from '@angular/common/locales/en';
 import { registerLocaleData } from '@angular/common';
 import { TaskStatusComponent } from "./task-status/task-status.component";
 import { TaskFilterPipe } from './pipes/task-filter.pipe';
+import { GanttChartComponent } from './gantt-chart/gantt-chart.component';
 
 registerLocaleData(localeDe, 'de');
 registerLocaleData(localeEn, 'en');
 @NgModule({
   declarations: [
     AppComponent,
-    TaskFilterPipe
+    TaskFilterPipe,
+    GanttChartComponent
     ],
   imports: [
     RouterModule.forRoot(routes),

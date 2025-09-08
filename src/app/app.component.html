@@ -268,62 +268,13 @@
     </div>
   </div>
 
-<ngx-gantt #gantt [groups]="groups" [items]="items" [viewType]="viewType" [draggable]="true" (dragEnded)="dragEnded($event)" 
-[showToolbar]="true"
-[toolbarOptions]="toolbarOptions"
-[linkable]="true"
-(linkDragEnded)="onLinkFinished($event)"
-(lineClick)="lineClick($event)"
-[selectable]="true"
-(selectedChange)="onSelect($event)"
-(barClick)="barClick($event)"
-[quickTimeFocus]="true"
-[maxLevel]="maxHierarchyLevel"
-(expandChange)="onExpandChange($event)"
->
-  <ngx-gantt-table [draggable]="true" (dragDropped)="onRowDragDropped($event)">
-    <ngx-gantt-column name="Title" width="200px">
-      <ng-template #cell let-item="item"> 
-        <app-task-title 
-        [item]="item"
-        (deleted)="onTaskDelete(item.id)"
-      ></app-task-title>
-      </ng-template>
-    </ngx-gantt-column>
-        <ngx-gantt-column name="Status" width="100px">
-      <ng-template #cell let-item="item"> 
-        <app-task-status 
-          [(status)]="item.origin.status"
-          (statusChange)="onStatusChange(item)"
-          (progressChange)="onProgressChange(item)"
-          [(progress)]="item.origin.progress"
-          [task]="item.origin"
-          [allTasks]="chart.tasks"
-          (validationError)="onValidationError($event)"
-          [chart]="chart"
-        ></app-task-status>
-      </ng-template>
-    </ngx-gantt-column>
-    <ngx-gantt-column name="Begin" width="100px">
-      <ng-template #cell let-item="item"> 
-        <span>{{ item.start | date:'shortDate' }}</span>
-      </ng-template>
-    </ngx-gantt-column>
-    <ngx-gantt-column name="End" width="100px">
-      <ng-template #cell let-item="item"> 
-        <span [ngStyle]="{ color: isOverdue(item.origin) ? 'red' : 'inherit' }">{{ item.end | date:'shortDate' }}</span>
-      </ng-template>
-    </ngx-gantt-column>
-  </ngx-gantt-table>
-        <!-- group template -->
-        <ng-template #group let-group="group" let-items="items">
-          <app-group-title 
-        [item]="group"
-        (clicked)="onGroupTitleClick(group.id)"
-        (deleted)="onGroupDelete(group.id)"
-        (taskAdded)="onAddTask(group.id)"
-        
-      ></app-group-title>
-        </ng-template>
-</ngx-gantt>
-</div>
+<!-- Neue Gantt-Chart-Komponente -->
+<app-gantt-chart
+  [tasks]="chart.tasks"
+  [groups]="chart.groups"
+  [filteredTaskIds]="filteredTaskIds"
+  [expanded]="chart.expanded"
+  (dataChanged)="onGanttDataChanged($event)"
+  (expandedChanged)="onGanttExpandedChanged($event)"
+  (taskAddRequest)="onAddTask($event)">
+</app-gantt-chart>

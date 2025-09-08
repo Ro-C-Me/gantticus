@@ -1,0 +1,70 @@
+<ngx-gantt 
+  #gantt
+  [items]="items" 
+  [groups]="ganttGroups"
+  [viewType]="viewType"
+  [draggable]="draggable"
+  [linkable]="linkable"
+  [selectable]="selectable"
+  [showToolbar]="showToolbar"
+  [toolbarOptions]="toolbarOptions"
+  [quickTimeFocus]="quickTimeFocus"
+  [maxLevel]="maxLevel"
+  (barClick)="barClick($event)"
+  (dragEnded)="dragEnded($event)"
+  (linkDragEnded)="onLinkDragEnded($event)"
+  (expandChange)="onExpandChange($event)"
+  (lineClick)="onLinkClick($event)"
+  (selectedChange)="onSelect($event)">
+  
+  <ngx-gantt-table [draggable]="draggable" (dragDropped)="onRowDragDropped($event)">
+    <ngx-gantt-column name="Title" [width]="200">
+      <ng-template #cell let-item="item">
+        <app-task-title 
+          [item]="item"
+          (deleted)="onTaskDeleted(item)"
+          (clicked)="onTaskTitleClicked(item)"
+        ></app-task-title>
+      </ng-template>
+    </ngx-gantt-column>
+    
+    <ngx-gantt-column name="Status" [width]="100">
+      <ng-template #cell let-item="item">
+        <app-task-status 
+          [(status)]="item.origin.status"
+          (statusChange)="onStatusChange(item)"
+          (progressChange)="onProgressChange(item)"
+          [(progress)]="item.origin.progress"
+          [task]="item.origin"
+          [allTasks]="tasks"
+          (validationError)="onValidationError($event)"
+        ></app-task-status>
+      </ng-template>
+    </ngx-gantt-column>
+    
+    <ngx-gantt-column name="Begin" [width]="100">
+      <ng-template #cell let-item="item">
+        {{ toDate(item.start) | date:'shortDate' }}
+      </ng-template>
+    </ngx-gantt-column>
+    
+    <ngx-gantt-column name="End" [width]="100">
+      <ng-template #cell let-item="item">
+        <span [ngStyle]="{ color: isOverdue(item.origin) ? 'red' : 'inherit' }">
+          {{ toDate(item.end) | date:'shortDate' }}
+        </span>
+      </ng-template>
+    </ngx-gantt-column>
+  </ngx-gantt-table>
+  
+  <!-- Group Template -->
+  <ng-template #group let-group="group" let-items="items">
+    <app-group-title 
+      [item]="group"
+      (clicked)="onGroupTitleClick(group)"
+      (deleted)="onGroupDelete(group)"
+      (taskAdded)="onAddTask(group)"
+    ></app-group-title>
+  </ng-template>
+  
+</ngx-gantt>
