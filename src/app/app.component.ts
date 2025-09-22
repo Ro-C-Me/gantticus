@@ -560,13 +560,12 @@ availableCharts: {
     }
     
     this.saveStateForUndo();
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+
   }
 
   onGanttExpandedChanged(newExpanded: Set<string>) {
     this.chart.expanded = newExpanded;
     this.saveStateForUndo();
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
   }
 
   clearFilter() {

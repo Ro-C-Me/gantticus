@@ -37,6 +37,14 @@ export class GanttChartComponent implements OnInit {
   items: GanttItem[] = [];
   ganttGroups: GanttGroup[] = [];
 
+  // Performance-optimierte Lookup-Maps
+  private taskById = new Map<string, Task>();
+  private childrenByParentId = new Map<string, string[]>();
+  private parentByChildId = new Map<string, string>();
+  private groupById = new Map<string, Group>();
+  private tasksByGroupId = new Map<string, string[]>();
+  private itemById = new Map<string, GanttItem>();
+
   viewType = GanttViewType.month;
   
   toolbarOptions: GanttToolbarOptions = {
@@ -61,7 +69,6 @@ export class GanttChartComponent implements OnInit {
 
   // Public method to trigger updates from parent component
   public update() {
-    // console.log("=== MANUAL UPDATE TRIGGERED ===");
     this.updateGanttItems();
   }
 
@@ -240,21 +247,14 @@ export class GanttChartComponent implements OnInit {
     if (item.origin instanceof Task) {
       const task = item.origin;
       
-      // Task aus dem originalen Array entfernen (direkte Mutation)
-      const taskIndex = this.tasks.findIndex(t => t.id === task.id);
-      if (taskIndex !== -1) {
-        this.tasks.splice(taskIndex, 1);
-        
-        // Dependencies in anderen Tasks entfernen  
-        this.tasks.forEach(t => {
-          t.dependencies = t.dependencies.filter(d => d.taskId !== task.id);
-        });
+      // Task löschen über zentrale Methode
+      if (this.deleteTaskById(task.id)) {
+        // Benachrichtige Parent über Löschung
+        this.dataChanged.emit('task-deleted');
+        // TODO Not really performant, but necessary at the moment: Rerender whole component after deletion
+        this.updateGanttItems();
+        this.toastService.showSuccess('Task gelöscht', `Task "${task.title}" wurde gelöscht.`);
       }
-      
-      // Benachrichtige Parent über Löschung
-      this.dataChanged.emit('task-deleted');
-      
-      this.toastService.showSuccess('Task gelöscht', `Task "${task.title}" wurde gelöscht.`);
     }
   }
 
@@ -274,29 +274,27 @@ export class GanttChartComponent implements OnInit {
 
   onGroupDelete(group: GanttGroup) {
     if (group.origin instanceof Group) {
-      const tasksInGroup = this.tasks.filter(task => task.group === group.id);
-      const taskCount = tasksInGroup.length;
+      // Optimierte Version: O(1) Group-Lookup
+      const taskIds = this.tasksByGroupId.get(group.id) || [];
+      const taskCount = taskIds.length;
       
-      // Alle Tasks der Gruppe direkt entfernen
-      tasksInGroup.forEach(task => {
-        const taskIndex = this.tasks.findIndex(t => t.id === task.id);
-        if (taskIndex !== -1) {
-          this.tasks.splice(taskIndex, 1);
-        }
-        
-        // Dependencies in anderen Tasks entfernen
-        this.tasks.forEach(t => {
-          t.dependencies = t.dependencies.filter(d => d.taskId !== task.id);
-        });
+      taskIds.forEach(taskId => {
+        this.deleteTaskById(taskId);
       });
       
-      // Gruppe aus Groups-Array entfernen
+      // Gruppe aus Groups-Array und Maps entfernen
       const groupIndex = this.groups.findIndex(g => g.id === group.id);
       if (groupIndex !== -1) {
         this.groups.splice(groupIndex, 1);
+        // Group Maps aktualisieren
+        this.groupById.delete(group.id);
+        this.tasksByGroupId.delete(group.id);
       }
-      
-      // Benachrichtige Parent über Löschung
+
+      // TODO Not really performant, but necessary at the moment: Rerender whole component after deletion
+      this.updateGanttItems();
+
+      // Benachrichtige Parent über Löschung (einmal für die ganze Gruppe)
       this.dataChanged.emit('group-deleted');
       
       this.toastService.showSuccess('Gruppe gelöscht', 
@@ -305,7 +303,7 @@ export class GanttChartComponent implements OnInit {
   }
 
   onAddTask(group: GanttGroup) {
-    // Task-hinzufügen-Request an Parent-Komponente senden
+    // TODO warum muss das über außen gespielt werden?
     this.taskAddRequest.emit(group.id);
   }
 
@@ -344,16 +342,41 @@ export class GanttChartComponent implements OnInit {
     modalRef.result.then((updatedTask: Task) => {
       if (updatedTask) {
         console.log('Task updated via modal:', updatedTask);
+
+        const item = this.itemById.get(updatedTask.id);
+        if (item) {
+          item.title = updatedTask.title;
+          item.start = updatedTask.start;
+          item.end = updatedTask.end;
+          item.progress = updatedTask.progress;
+        }
+        // TODO dependencies
+        // TODO aggregation
+        // TODO update filter?
         this.dataChanged.emit('task-updated');
       }
-    }).catch(err => {
+  }
+  ).catch(err => {
       console.log('Task edit modal dismissed');
     });
   }
 
    updateGanttItems() {
-    console.log("START UPDATING ITEMS, GROUPS: ", this.groups);
-    let itemById = new Map<string, GanttItem>();
+    const startTime = performance.now();
+    console.log("🟡 [GANTTICUS PERF] START updateGanttItems", {
+      tasksCount: this.tasks.length,
+      groupsCount: this.groups.length,
+      filteredTasksCount: this.filteredTasks.length
+    });
+    
+    // Performance-optimierte Lookup-Maps aufbauen
+    this.buildLookupMaps();
+    
+    // itemById Map zurücksetzen - wird neu aufgebaut
+    this.itemById.clear();
+    this.items = [];
+    this.ganttGroups = [];
+
     let childTaskIds = new Set<string>();
     let requiresDefaultGroup = false;
     
@@ -371,65 +394,62 @@ export class GanttChartComponent implements OnInit {
         });
       }
     });
-
-    this.items = [];
-
     this.filteredTasks.forEach( t => {
-      let item : GanttItem = {title : t.title, id : t.id}; 
-      item.progress = t.progress;
-      item.origin = t;
-      
-      // Expanded-Zustand aus dem Chart wiederherstellen
-      // Standardmäßig sind alle Tasks geschlossen, außer sie stehen in der expanded-Liste
-      item.expanded = this.expanded.has(t.id);
-      
-      // Start und End berechnen basierend auf computeFromChildren (jetzt rekursiv)
-      if (t.computeFromChildren && t.children && t.children.length > 0) {
-        const computedDates = this.computePropertiesFromChildren(t, computedPropertiesCache);
-        item.start = computedDates.start;
-        item.end = computedDates.end;
-      } else {
-        item.start = t.computedStart;
-        item.end = t.computedEnd;
-      }
-      
-      if (t.color) {
-        item.color = t.color;
-      } else if (t.group &&  this.getGroupById(t.group)) {
-        item.color = this.getGroupById(t.group)!.color;
-      } else {
-        // Für Sub-Tasks: Farbe des Parent-Tasks (bzw. seiner Gruppe) verwenden
-        const parentGroup = this.getParentGroupForTask(t.id);
-        if (parentGroup) {
-          item.color = parentGroup.color;
+        let item : GanttItem = {title : t.title, id : t.id}; 
+        item.progress = t.progress;
+        item.origin = t;
+        
+        // Expanded-Zustand aus dem Chart wiederherstellen
+        // Standardmäßig sind alle Tasks geschlossen, außer sie stehen in der expanded-Liste
+        item.expanded = this.expanded.has(t.id);
+        
+        // Start und End berechnen basierend auf computeFromChildren (jetzt rekursiv)
+        if (t.computeFromChildren && t.children && t.children.length > 0) {
+          const computedDates = this.computePropertiesFromChildren(t, computedPropertiesCache);
+          item.start = computedDates.start;
+          item.end = computedDates.end;
+        } else {
+          item.start = t.computedStart;
+          item.end = t.computedEnd;
         }
-      }
-      if (t.group) {
-        item.group_id = t.group;
-      }
-      else {
-        requiresDefaultGroup = true;
-        item.group_id = Group.DEFAULT_GROUP_ID;
-      }
-      item.draggable = !t.scheduleFinalized && !t.computeFromChildren;
+        
+        if (t.color) {
+          item.color = t.color;
+        } else if (t.group &&  this.getGroupById(t.group)) {
+          item.color = this.getGroupById(t.group)!.color;
+        } else {
+          // Für Sub-Tasks: Farbe des Parent-Tasks (bzw. seiner Gruppe) verwenden
+          const parentGroup = this.getParentGroupForTask(t.id);
+          if (parentGroup) {
+            item.color = parentGroup.color;
+          }
+        }
+        if (t.group) {
+          item.group_id = t.group;
+        }
+        else {
+          requiresDefaultGroup = true;
+          item.group_id = Group.DEFAULT_GROUP_ID;
+        }
+        item.draggable = !t.scheduleFinalized && !t.computeFromChildren;
 
-      if (t.milestone) {
-        item.type = GanttItemType.milestone;
-      }
-      
-      if (!childTaskIds.has(t.id)) {
-        this.items.push(item);
-      }
-      itemById.set(t.id, item);
-    });
+        if (t.milestone) {
+          item.type = GanttItemType.milestone;
+        }
+        
+        if (!childTaskIds.has(t.id)) {
+          this.items.push(item);
+        }
+        this.itemById.set(t.id, item);
+      });
 
     // Sub-Tasks (children) zuweisen - nach dem alle Items erstellt sind
     this.filteredTasks.forEach(t => {
       if (t.children && t.children.length > 0) {
-        const parentItem = itemById.get(t.id);
+        const parentItem = this.itemById.get(t.id);
         if (parentItem) {
           parentItem.children = t.children
-            .map(childId => itemById.get(childId))
+            .map(childId => this.itemById.get(childId))
             .filter(child => child !== undefined) as GanttItem[];
         }
       }
@@ -437,28 +457,22 @@ export class GanttChartComponent implements OnInit {
 
     this.filteredTasks.forEach(t => {
      t.dependencies.forEach(d => {
-        if (!itemById.get(d.taskId)) {
-          console.warn(t.id + " seem to depend on unknown task " + d.taskId);
-        }
-        else {
-          if (!itemById.get(d.taskId)!.links) {
-            itemById.get(d.taskId)!.links = [];
+        if (this.itemById.get(d.taskId)) {
+          if (!this.itemById.get(d.taskId)!.links) {
+            this.itemById.get(d.taskId)!.links = [];
           }
-          itemById.get(d.taskId)!.links?.push(createGanttLink(t.id, d.type));
+          this.itemById.get(d.taskId)!.links?.push(createGanttLink(t.id, d.type));
         }
      })
     });
 
     // Aggregierte Dependencies für eingeklappte Parent-Tasks hinzufügen
-    this.addAggregatedDependencies(itemById, this.filteredTasks);
-    
-    // Gruppen filtern - zeige nur Gruppen mit gefilterten Tasks oder komplett leere Gruppen
-    this.ganttGroups = [];
+    this.addAggregatedDependencies();
 
     this.groups.forEach( g => {
-      // Prüfe ob Gruppe überhaupt Tasks zugeordnet hat (in allen Tasks, nicht nur gefilterten)
-      const allTasksInGroup = this.tasks.filter(task => task.group === g.id);
-      const isReallyEmpty = allTasksInGroup.length === 0;
+      // Optimierte Version: O(1) Group-Lookups
+      const allTaskIdsInGroup = this.tasksByGroupId.get(g.id) || [];
+      const isReallyEmpty = allTaskIdsInGroup.length === 0;
       
       // Prüfe ob die Gruppe gefilterte Tasks enthält
       const filteredTasksInGroup = this.filteredTasks.filter(task => task.group === g.id);
@@ -524,7 +538,16 @@ export class GanttChartComponent implements OnInit {
 
     // Dependency-Aggregation: Sammelt alle Dependencies der Sub-Tasks und fügt sie dem Parent hinzu
     // Wird nur aufgerufen, wenn der Parent eingeklappt ist (!item.expanded)
-    this.addAggregatedDependencies(itemById, this.filteredTasks);
+    this.addAggregatedDependencies();
+    
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    const color = duration > 100 ? '🔴' : duration > 50 ? '🟠' : '🟢';
+    console.log(`${color} [GANTTICUS PERF] END   updateGanttItems - ${duration.toFixed(2)}ms`, {
+      finalItemsCount: this.items.length,
+      finalGroupsCount: this.ganttGroups.length,
+      processedTasksCount: this.filteredTasks.length
+    });
   }
 
   private computePropertiesFromChildren(task: Task, cache: Map<string, boolean>): { start?: Date, end?: Date, status?: Status, progress?: number } {
@@ -789,9 +812,9 @@ export class GanttChartComponent implements OnInit {
 
   
 
-  private addAggregatedDependencies(itemById: Map<string, GanttItem>, filteredTasks: Task[]): void {
-    for (const task of filteredTasks) {
-      const parentItem = itemById.get(task.id);
+  private addAggregatedDependencies(): void {
+    for (const task of this.filteredTasks) {
+      const parentItem = this.itemById.get(task.id);
       
       // Nur für Parent-Tasks mit Children, die eingeklappt sind
       if (parentItem && task.children && task.children.length > 0 && !parentItem.expanded) {
@@ -799,36 +822,27 @@ export class GanttChartComponent implements OnInit {
         const totalDeps = aggregatedDeps.incoming.length + aggregatedDeps.outgoing.length;
         
         if (totalDeps > 0) {
-          console.log(`Processing ${totalDeps} aggregated dependencies for collapsed parent ${task.id}:`, 
-                     `${aggregatedDeps.incoming.length} incoming, ${aggregatedDeps.outgoing.length} outgoing`);
-          
           // Eingehende Dependencies verarbeiten: dependencyTaskId → Parent
           for (const dep of aggregatedDeps.incoming) {
-            const blockingItem = itemById.get(dep.taskId);
+            const blockingItem = this.itemById.get(dep.taskId);
             if (blockingItem) {
               if (!blockingItem.links) {
                 blockingItem.links = [];
               }
               const ganttLink = { link: task.id, type: this.mapDependencyType(dep.type) };
               blockingItem.links.push(ganttLink);
-              console.log(`Added incoming aggregated link: ${dep.taskId} → ${task.id}`);
-            } else {
-              console.warn(`Incoming dependency target not found: ${dep.taskId}`);
-            }
+            } 
           }
           
           // Ausgehende Dependencies verarbeiten: Parent → dependencyTaskId
           for (const dep of aggregatedDeps.outgoing) {
-            const targetItem = itemById.get(dep.taskId);
+            const targetItem = this.itemById.get(dep.taskId);
             if (targetItem) {
               if (!parentItem.links) {
                 parentItem.links = [];
               }
               const ganttLink = { link: dep.taskId, type: this.mapDependencyType(dep.type) };
               parentItem.links.push(ganttLink);
-              console.log(`Added outgoing aggregated link: ${task.id} → ${dep.taskId}`);
-            } else {
-              console.warn(`Outgoing dependency target not found: ${dep.taskId}`);
             }
           }
         }
@@ -906,22 +920,113 @@ export class GanttChartComponent implements OnInit {
     return { incoming: incomingDependencies, outgoing: outgoingDependencies };
   }
 
+  /**
+   * Baut alle Performance-optimierten Lookup-Maps auf
+   * Muss nach jeder Änderung der Tasks- oder Groups-Liste aufgerufen werden
+   */
+  private buildLookupMaps(): void {
+    // Task Maps
+    this.taskById.clear();
+    this.childrenByParentId.clear();
+    this.parentByChildId.clear();
+    
+    for (const task of this.tasks) {
+      this.taskById.set(task.id, task);
+      
+      // Parent-Child-Beziehungen in Maps speichern
+      if (task.children && task.children.length > 0) {
+        this.childrenByParentId.set(task.id, [...task.children]);
+        task.children.forEach(childId => {
+          this.parentByChildId.set(childId, task.id);
+        });
+      }
+    }
+    
+    // Group Maps
+    this.groupById.clear();
+    this.tasksByGroupId.clear();
+    
+    for (const group of this.groups) {
+      this.groupById.set(group.id, group);
+    }
+    
+    // Tasks nach Gruppen organisieren
+    for (const task of this.tasks) {
+      const groupId = task.group || Group.DEFAULT_GROUP_ID;
+      
+      if (!this.tasksByGroupId.has(groupId)) {
+        this.tasksByGroupId.set(groupId, []);
+      }
+      this.tasksByGroupId.get(groupId)!.push(task.id);
+    }
+  }
+
+  /**
+   * Löscht einen Task aus dem Array und allen Performance-Maps
+   * @param taskId - ID des zu löschenden Tasks
+   * @returns true wenn Task gefunden und gelöscht wurde, false sonst
+   */
+  private deleteTaskById(taskId: string): boolean {
+    const taskIndex = this.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex !== -1) {
+      // Task aus Array entfernen
+      this.tasks.splice(taskIndex, 1);
+      
+      // Task aus allen Maps entfernen
+      this.taskById.delete(taskId);
+      this.itemById.delete(taskId);
+      
+      // Parent-Child-Beziehungen aufräumen
+      const parentId = this.parentByChildId.get(taskId);
+      if (parentId) {
+        // Aus Parent entfernen
+        this.removeTaskFromParent(taskId);
+      }
+      
+      // Children zu Top-Level machen (falls vorhanden)
+      const children = this.childrenByParentId.get(taskId);
+      if (children) {
+        children.forEach(childId => {
+          this.parentByChildId.delete(childId);
+          // Children bleiben ohne Gruppen-Änderung - wie bisher
+        });
+        this.childrenByParentId.delete(taskId);
+      }
+      
+      // Dependencies in anderen Tasks entfernen
+      this.tasks.forEach(t => {
+        t.dependencies = t.dependencies.filter(d => d.taskId !== taskId);
+      });
+      
+      return true;
+    }
+    return false;
+  }
+
   private getTaskById(id: string): Task | undefined {
-    return this.tasks.find(task => task.id === id);
+    // Optimierte Version: O(1) statt O(n)
+    return this.taskById.get(id);
   }
 
   getGroupById(id: string) : Group | undefined{
-    return this.groups.find(t => t.id == id);
+    // Optimierte Version: O(1) statt O(n)
+    return this.groupById.get(id);
   }
 
   private removeTaskFromParent(taskId: string) {
-    // Task aus dem Parent-Children-Array entfernen
-    // Normalerweise gibt es nur einen Parent, aber wir prüfen alle für Robustheit
-    this.tasks.forEach(task => {
-      if (task.children && task.children.includes(taskId)) {
-        task.children = task.children.filter(childId => childId !== taskId);
+    // Optimierte Version: O(1) statt O(n×m)
+    const parentId = this.parentByChildId.get(taskId);
+    if (parentId) {
+      const parentTask = this.taskById.get(parentId);
+      if (parentTask && parentTask.children) {
+        // Aus dem Parent-Task Array entfernen
+        parentTask.children = parentTask.children.filter(childId => childId !== taskId);
+        
+        // Maps aktualisieren
+        this.parentByChildId.delete(taskId);
+        this.childrenByParentId.set(parentId, [...parentTask.children]);
       }
-    });
+    }
   }
 
   private handleSubTaskCreation(taskToMove: Task, parentId: string, targetId: string, dropPosition: string) {
@@ -949,6 +1054,10 @@ export class GanttChartComponent implements OnInit {
       const insertIndex = dropPosition === "after" ? targetIndex + 1 : targetIndex;
       parentTask.children.splice(insertIndex, 0, taskToMove.id);
     }
+
+    // Maps aktualisieren - neue Parent-Child-Beziehung
+    this.parentByChildId.set(taskToMove.id, parentId);
+    this.childrenByParentId.set(parentId, [...parentTask.children]);
 
     // Gruppe des Sub-Tasks entfernen, da Sub-Tasks keine eigene Gruppe haben
     // Die Gruppenzugehörigkeit wird durch den Parent-Task bestimmt
@@ -992,13 +1101,15 @@ export class GanttChartComponent implements OnInit {
 
     // Hilfsmethode: Findet die Gruppe eines Parent-Tasks für einen Sub-Task
     private getParentGroupForTask(taskId: string): Group | undefined {
-      // Parent-Task finden
-      const parentTask = this.tasks.find(task => 
-        task.children && task.children.includes(taskId)
-      );
-      
-      if (!parentTask) {
+      // Optimierte Version: O(1) statt O(n×m)
+      const parentId = this.parentByChildId.get(taskId);
+      if (!parentId) {
         return undefined; // Kein Parent gefunden
+      }
+      
+      const parentTask = this.taskById.get(parentId);
+      if (!parentTask) {
+        return undefined; // Parent-Task nicht gefunden
       }
       
       // Gruppe des Parent-Tasks zurückgeben
