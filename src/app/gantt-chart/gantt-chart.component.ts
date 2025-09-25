@@ -6,6 +6,7 @@ import { TaskEditModalComponent } from '../task-edit-modal/task-edit-modal.compo
 import { GroupEditModalComponent } from '../group-edit-modal/group-edit-modal.component';
 import { TaskTitleComponent } from '../task-title/task-title.component';
 import { ToastService } from '../toast.service';
+import { DependencyCache, DependencyChangeSet } from './dependency-cache';
 
 @Component({
   selector: 'app-gantt-chart',
@@ -44,7 +45,10 @@ export class GanttChartComponent implements OnInit {
   private groupById = new Map<string, Group>();
   private tasksByGroupId = new Map<string, string[]>();
   private itemById = new Map<string, GanttItem>();
-
+  
+  // High-performance dependency cache for O(1) dependency lookups
+  // Now using shared DependencyService instead of local cache
+  
   viewType = GanttViewType.month;
   
   toolbarOptions: GanttToolbarOptions = {
@@ -65,7 +69,7 @@ export class GanttChartComponent implements OnInit {
   quickTimeFocus = true;
   maxLevel = 5; // Wird später dynamisch gesetzt
 
-  constructor(private modalService: NgbModal, private toastService: ToastService) {}
+  constructor(private modalService: NgbModal, private toastService: ToastService, private dependencyCache: DependencyCache) {}
 
   // Public method to trigger updates from parent component
   public update() {
@@ -107,20 +111,10 @@ export class GanttChartComponent implements OnInit {
 
   dragEnded($event: GanttDragEvent) {
     const ganttItem = $event.item as GanttItem<unknown>;
-    
-    console.log("=== DRAG ENDED EVENT DEBUG ===");
-    console.log("Event:", $event);
-    console.log("Item start (raw):", $event.item.start, "Type:", typeof $event.item.start);
-    console.log("Item end (raw):", $event.item.end, "Type:", typeof $event.item.end);
-    console.log("Item start as Date:", $event.item.start ? new Date($event.item.start) : 'undefined');
-    console.log("Item end as Date:", $event.item.end ? new Date($event.item.end) : 'undefined');
-    
+
     if (ganttItem.origin instanceof Task) {
       const task = ganttItem.origin;
-      
-      console.log("Original task start:", task.start);
-      console.log("Original task end:", task.end);
-      
+
       // Direkte Mutation der originalen Task-Daten
       task.start = this.toDate($event.item.start);
       task.end = this.toDate($event.item.end);
@@ -203,7 +197,11 @@ export class GanttChartComponent implements OnInit {
       
       targetTask.dependencies.push(dependency);
       
+      // Cache inkrementell aktualisieren
+      this.dependencyCache.addDependency(sourceTask.id, targetTask.id, dependency.type);
+      
       console.log(`Added dependency: ${sourceTask.id} -> ${targetTask.id} (${dependency.type})`);
+      
       this.dataChanged.emit('dependency-added');
     }
   }
@@ -215,13 +213,115 @@ export class GanttChartComponent implements OnInit {
       const sourceId = $event.source.id;
       
       console.log("dependencies before removal:", targetTask.dependencies);
+      
+      // Den Dependency-Type bestimmen, bevor wir löschen
+      const dependencyToRemove = targetTask.dependencies.find(d => d.taskId === sourceId);
+      const dependencyType = dependencyToRemove?.type || DependencyType.FS; // Fallback
+      
       // Dependency aus dem Target-Task entfernen
       targetTask.dependencies = targetTask.dependencies.filter(d => d.taskId !== sourceId);
       console.log("dependencies after removal:", targetTask.dependencies);
 
-      console.log(`Removed dependency: ${sourceId} -> ${targetTask.id}`);
+      const item = this.itemById.get(sourceId);
+      if (item && item.links) {
+        console.log("item links: ", item.links);
+        item.end = new Date();
+        item.links = item.links.filter(link => link.link !== targetTask.id);
+        console.log("removed dependency", item.links);
+      }
+      else {
+        console.warn(`No Gantt item or links found for sourceId ${sourceId}`);
+      }
+      // Cache inkrementell aktualisieren
+      this.dependencyCache.removeDependency(sourceId, targetTask.id, dependencyType);
+
+      console.log(`Removed dependency: ${sourceId} -> ${targetTask.title}`);
       
+      this.items = [...this.items]; // Force UI update
       this.dataChanged.emit('dependency-removed');
+    }
+  }
+
+  /**
+   * Applies dependency changes to the GanttItems by updating their links property.
+   * This method handles both adding new links and removing existing links based on
+   * the provided change set.
+   * 
+   * @param changeSet The set of dependency changes to apply
+   */
+  private applyDependencyChangesToGanttItems(changeSet: DependencyChangeSet): void {
+    console.log(`🔗 [GANTT ITEMS] Applying dependency changes: +${changeSet.addedDependencies.length} -${changeSet.removedDependencies.length}`);
+    
+    // Remove dependencies: find source items and remove links to target
+    for (const removedDep of changeSet.removedDependencies) {
+      const sourceItem = this.itemById.get(removedDep.sourceId);
+      if (sourceItem && sourceItem.links) {
+        const originalLength = sourceItem.links.length;
+        sourceItem.links = sourceItem.links.filter(link => {
+          // Handle both string and GanttLink types for backwards compatibility
+          if (typeof link === 'string') {
+            return link !== removedDep.targetId;
+          }
+          return !(link.link === removedDep.targetId && this.mapGanttLinkType(link.type) === removedDep.type);
+        });
+        if (sourceItem.links.length < originalLength) {
+          console.log(`🔗 [GANTT ITEMS] Removed link: ${removedDep.sourceId} -${removedDep.type}-> ${removedDep.targetId}`);
+        }
+      }
+    }
+    
+    // Add dependencies: find source items and add links to target
+    for (const addedDep of changeSet.addedDependencies) {
+      const sourceItem = this.itemById.get(addedDep.sourceId);
+      if (sourceItem) {
+        // Initialize links array if it doesn't exist
+        if (!sourceItem.links) {
+          sourceItem.links = [];
+        }
+        
+        // Create and add the new link
+        const newLink = this.createGanttLink(addedDep.targetId, addedDep.type);
+        sourceItem.links.push(newLink);
+        console.log(`🔗 [GANTT ITEMS] Added link: ${addedDep.sourceId} -${addedDep.type}-> ${addedDep.targetId}`);
+      }
+    }
+    
+    // Force UI update if there were any changes
+    if (changeSet.addedDependencies.length > 0 || changeSet.removedDependencies.length > 0) {
+      this.items = [...this.items];
+    }
+  }
+
+  /**
+   * Helper method to create a GanttLink from dependency information.
+   * @param targetId The ID of the target task
+   * @param type The dependency type
+   * @returns A GanttLink object
+   */
+  private createGanttLink(targetId: string, type: DependencyType): import("@worktile/gantt").GanttLink {
+    return { 
+      link: targetId, 
+      type: this.mapDependencyTypeToGanttLinkType(type) 
+    };
+  }
+
+  /**
+   * Maps our internal DependencyType to GanttLinkType.
+   * @param type The internal dependency type
+   * @returns The corresponding GanttLinkType
+   */
+  private mapDependencyTypeToGanttLinkType(type: DependencyType): GanttLinkType {
+    switch (type) {
+      case DependencyType.FS:
+        return GanttLinkType.fs;
+      case DependencyType.FF:
+        return GanttLinkType.ff;
+      case DependencyType.SS:
+        return GanttLinkType.ss;
+      case DependencyType.SF:
+        return GanttLinkType.sf;
+      default:
+        throw new Error(`Unbekannter DependencyType: ${type}`);
     }
   }
 
@@ -349,14 +449,18 @@ export class GanttChartComponent implements OnInit {
           item.start = updatedTask.start;
           item.end = updatedTask.end;
           item.progress = updatedTask.progress;
+          
+          // Update dependencies using the shared dependency service
+          const changeSet = this.dependencyCache.updateTaskDependencies(updatedTask.id, updatedTask.dependencies);
+          this.applyDependencyChangesToGanttItems(changeSet);
+
+          // TODO aggregation
+          // TODO update filter?
+          
+          this.dataChanged.emit('task-updated');
         }
-        // TODO dependencies
-        // TODO aggregation
-        // TODO update filter?
-        this.dataChanged.emit('task-updated');
       }
-  }
-  ).catch(err => {
+    }).catch(err => {
       console.log('Task edit modal dismissed');
     });
   }
@@ -457,11 +561,12 @@ export class GanttChartComponent implements OnInit {
 
     this.filteredTasks.forEach(t => {
      t.dependencies.forEach(d => {
-        if (this.itemById.get(d.taskId)) {
-          if (!this.itemById.get(d.taskId)!.links) {
-            this.itemById.get(d.taskId)!.links = [];
+        const sourceItem = this.itemById.get(d.taskId);
+        if (sourceItem) {
+          if (!sourceItem.links) {
+            sourceItem.links = [];
           }
-          this.itemById.get(d.taskId)!.links?.push(createGanttLink(t.id, d.type));
+          sourceItem.links.push(createGanttLink(t.id, d.type));
         }
      })
     });
@@ -925,6 +1030,8 @@ export class GanttChartComponent implements OnInit {
    * Muss nach jeder Änderung der Tasks- oder Groups-Liste aufgerufen werden
    */
   private buildLookupMaps(): void {
+    const startTime = performance.now();
+    
     // Task Maps
     this.taskById.clear();
     this.childrenByParentId.clear();
@@ -959,6 +1066,22 @@ export class GanttChartComponent implements OnInit {
       }
       this.tasksByGroupId.get(groupId)!.push(task.id);
     }
+    
+    // Dependency cache is now managed centrally by DependencyService
+    // Cache rebuild is handled by AppComponent
+    
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    
+    // Debug-Logs für Cache-Validierung
+    const cacheStats = this.dependencyCache.getStats();
+    console.log(`🔧 [GANTT MAPS] buildLookupMaps completed - ${duration.toFixed(2)}ms`, {
+      tasks: this.tasks.length,
+      groups: this.groups.length,
+      dependencies: cacheStats.totalDependencies,
+      tasksWithDeps: cacheStats.tasksWithDependencies,
+      tasksWithDependents: cacheStats.tasksWithDependents
+    });
   }
 
   /**
@@ -997,6 +1120,9 @@ export class GanttChartComponent implements OnInit {
       this.tasks.forEach(t => {
         t.dependencies = t.dependencies.filter(d => d.taskId !== taskId);
       });
+      
+      // DependencyService über Task-Löschung informieren
+      this.dependencyCache.removeTask(taskId);
       
       return true;
     }
