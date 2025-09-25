@@ -1,5 +1,6 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { Pipe, PipeTransform, inject } from '@angular/core';
 import { Task, Status } from '../domain/Task';
+import { DependencyCache } from '../gantt-chart/dependency-cache';
 
 export interface TaskFilter {
   taskFilter: string;
@@ -17,13 +18,31 @@ export interface TaskFilter {
   standalone: false
 })
 export class TaskFilterPipe implements PipeTransform {
+  private dependencyCache = inject(DependencyCache);
 
   transform(tasks: Task[], filter: TaskFilter): Task[] {
     if (!tasks || !filter) {
       return tasks || [];
     }
 
-    return this.getFilteredTasks(tasks, filter);
+    const startTime = performance.now();
+    const result = this.getFilteredTasks(tasks, filter);
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+    
+    // Performance-Logging (nur bei signifikanten Filteroperationen)
+    if (duration > 1 || (filter.showDownstreamDeps || filter.showUpstreamDeps)) {
+      console.log(`⏱️ [TASK FILTER PIPE] Filter took ${duration.toFixed(2)}ms`, {
+        tasksCount: tasks.length,
+        filteredCount: result.length,
+        textFilter: filter.taskFilter || '(none)',
+        downstreamDeps: filter.showDownstreamDeps,
+        upstreamDeps: filter.showUpstreamDeps,
+        duration: `${duration.toFixed(2)}ms`
+      });
+    }
+
+    return result;
   }
 
   private getFilteredTasks(tasks: Task[], filter: TaskFilter): Task[] {
@@ -75,66 +94,24 @@ export class TaskFilterPipe implements PipeTransform {
     // Erweiterung NUR in der jeweiligen Richtung, ausgehend von der Textsuche
     let resultIds = new Set(filteredTaskIds);
     if (filter.showDownstreamDeps) {
-      const downstreamIds = this.getDownstreamDependencies(tasks, filteredTaskIds);
-      downstreamIds.forEach(id => resultIds.add(id));
+      // Use service for efficient transitive dependency lookup
+      filteredTaskIds.forEach(taskId => {
+        const downstreamTasks = this.dependencyCache.getAllDownstreamDependents(taskId);
+        downstreamTasks.forEach(id => resultIds.add(id));
+      });
     }
     if (filter.showUpstreamDeps) {
-      const upstreamIds = this.getUpstreamDependencies(tasks, filteredTaskIds);
-      upstreamIds.forEach(id => resultIds.add(id));
+      // Use service for efficient transitive dependency lookup
+      filteredTaskIds.forEach(taskId => {
+        const upstreamTasks = this.dependencyCache.getAllUpstreamDependencies(taskId);
+        upstreamTasks.forEach(id => resultIds.add(id));
+      });
     }
     
     let filtered = tasks.filter(task => resultIds.has(task.id));
     // Status-Filter anwenden
     filtered = filtered.filter(task => this.isTaskStatusVisible(task, filter));
     return filtered;
-  }
-
-  private getDownstreamDependencies(tasks: Task[], taskIds: Set<string>): Set<string> {
-    const downstreamIds = new Set<string>();
-    const visited = new Set<string>();
-
-    // Downstream: Finde alle Tasks, die von den gefilterten Tasks direkt oder indirekt abhängen
-    const findDependents = (sourceTaskId: string) => {
-      if (visited.has(sourceTaskId)) return;
-      visited.add(sourceTaskId);
-
-      // Alle Tasks durchsuchen, die eine Dependency auf sourceTaskId haben
-      tasks.forEach(task => {
-        if (task.dependencies && task.dependencies.some(dep => dep.taskId === sourceTaskId)) {
-          if (!downstreamIds.has(task.id)) {
-            downstreamIds.add(task.id);
-            findDependents(task.id); // Rekursiv weiter suchen
-          }
-        }
-      });
-    };
-
-    taskIds.forEach(taskId => findDependents(taskId));
-    return downstreamIds;
-  }
-
-  private getUpstreamDependencies(tasks: Task[], taskIds: Set<string>): Set<string> {
-    const upstreamIds = new Set<string>();
-    const visited = new Set<string>();
-
-    // Upstream: Finde alle Tasks, von denen die gefilterten Tasks direkt oder indirekt abhängen
-    const findBlockers = (taskId: string) => {
-      if (visited.has(taskId)) return;
-      visited.add(taskId);
-
-      const task = tasks.find(t => t.id === taskId);
-      if (task && task.dependencies) {
-        task.dependencies.forEach(dep => {
-          if (!upstreamIds.has(dep.taskId)) {
-            upstreamIds.add(dep.taskId);
-            findBlockers(dep.taskId); // Rekursiv weiter suchen
-          }
-        });
-      }
-    };
-
-    taskIds.forEach(taskId => findBlockers(taskId));
-    return upstreamIds;
   }
 
   // Hilfsmethode zur Prüfung, ob ein Task basierend auf Status-Filtern sichtbar ist

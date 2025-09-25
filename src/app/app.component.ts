@@ -1,6 +1,6 @@
-import { Component, ViewChild, ElementRef, OnInit, HostListener } from '@angular/core';
-import { GanttItem, GanttViewType, GanttToolbarOptions, GanttLinkType } from '@worktile/gantt';
-import { Dependency, DependencyType, Group, Status, Task } from './domain/Task';
+import { Component, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { GanttItem, GanttViewType, GanttToolbarOptions } from '@worktile/gantt';
+import { Group, Status, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
 import { GroupEditModalComponent } from './group-edit-modal/group-edit-modal.component';
@@ -12,6 +12,7 @@ import { ConfirmChartDeleteDialogComponent } from './confirm-chart-delete-dialog
 import { ActivatedRoute } from '@angular/router';
 import { ToastService } from './toast.service';
 import { TaskFilterPipe } from './pipes/task-filter.pipe';
+import { DependencyCache } from './gantt-chart/dependency-cache';
 
 @Component({
   selector: 'app-root',
@@ -19,7 +20,7 @@ import { TaskFilterPipe } from './pipes/task-filter.pipe';
   styleUrl: './app.component.scss',
   standalone: false
 })
-export class AppComponent implements OnInit {
+export class AppComponent {
   @ViewChild(GanttChartComponent) ganttChartComponent!: GanttChartComponent;
 
   // Toast-Benachrichtigungen über Service
@@ -158,7 +159,8 @@ availableCharts: {
     private chartStorage: ChartStorageService, 
     private undoRedoService: UndoRedoService,
     private route: ActivatedRoute,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private dependencyCache: DependencyCache
   ) {
     this.initWithNewChart();
 
@@ -168,14 +170,6 @@ availableCharts: {
     this.undoRedoService.canUndo$.subscribe(can => this.canUndo = can);
     this.undoRedoService.canRedo$.subscribe(can => this.canRedo = can);
     this.undoRedoService.hasUnsavedChanges$.subscribe(has => this.hasUnsavedChanges = has);
-  }
-
-  ngOnInit() {
-    this.route.queryParams.subscribe(params => {
-      if (params['example'] === 'true') {
-        this.initializeExampleTasksAndGroups();
-      }
-    });
   }
 
   // Tastaturkürzel für Undo (Strg+Z) und Redo (Strg+Y)
@@ -201,100 +195,16 @@ availableCharts: {
     }
   }
   
-  private initializeExampleTasksAndGroups(): void {
-    let dependencies: Dependency[] = [];
-
-    let task0 = new Task();
-    task0.id = '000000';
-    task0.title = 'Task 0';
-    task0.start = new Date("2025-05-06");
-    task0.end = new Date("2025-05-08");
-    this.chart.tasks.push(task0);
-    task0.computedStart = task0.start ? task0.start : new Date();
-    task0.computedEnd = task0.end ? task0.end : new Date();
-    let dependency0 = new Dependency();
-    dependency0.taskId = task0.id;
-    dependencies.push(dependency0);
-    
-    let task1 = new Task();
-    task1.id = '000001';
-    task1.title = 'Task 1';
-    task1.computeFromChildren = true;
-    task1.computedStart = task1.start ? task1.start : new Date();
-    task1.computedEnd = task1.end ? task1.end : new Date();
-    this.chart.tasks.push(task1);
-
-    let task1_1 = new Task();
-    task1_1.id = '000001_1';
-    task1_1.title = 'Task 1.1';
-    task1_1.start = new Date("2025-05-05");
-    task1_1.end = new Date("2025-05-09");
-    this.chart.tasks.push(task1_1);
-    task1_1.computedStart = task1_1.start;
-    task1_1.computedEnd = task1_1.end;
-    let dependency1 = new Dependency();
-    dependency1.taskId = task1_1.id;
-    dependencies.push(dependency1);
-    task1.children.push(task1_1.id);
-
-    let task2 = new Task();
-    task2.id = '000002';
-    task2.title = 'Task 2';
-    task2.start = new Date("2025-05-10");
-    task2.end = new Date("2025-05-10");
-    this.chart.tasks.push(task2);
-    task2.computedStart = task2.start ? task2.start : new Date();
-    task2.computedEnd = task2.end ? task2.end : new Date();
-
-    let task3 = new Task();
-    task3.id = '000003';
-    task3.title = 'Task 3';
-    task3.start = new Date("2025-05-10");
-    task3.end = new Date("2025-05-10");
-    task3.milestone = true;
-    this.chart.tasks.push(task3);
-    task3.computedStart = task3.start ? task3.start : new Date();
-    task3.computedEnd = task3.end ? task3.end : new Date();
-    task3.dependencies = dependencies;
-    console.log("DEPENDENCIES", task3.dependencies);
-    let group0 = new Group();
-    group0.id = 'group0';
-    group0.title = 'Group 0';
-    this.chart.groups.push(group0);
-    
-    let dependency1_1_from_2 = new Dependency();
-    dependency1_1_from_2.taskId = task2.id;
-    task1_1.dependencies.push(dependency1_1_from_2);
-    let task4 = new Task();
-    task4.id = '000004';
-    task4.title = 'Task 4';
-    task4.start = new Date("2025-05-25");
-    task4.end = new Date("2025-05-25");
-    task4.milestone = true;
-    this.chart.tasks.push(task4);
-    task4.computedStart = task4.start ? task4.start : new Date();
-    task4.computedEnd = task4.end ? task4.end : new Date();
-    task4.group = group0.id;
-    task4.scheduleFinalized = true;
-
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
-
-  }
-  
   private initWithNewChart() {
     this.chart = new Chart();
     this.chart.id = this.createId();
     this.chart.name = 'New Gantt chart';
+    
+    // Initialize dependency cache for new chart
+    this.dependencyCache.rebuild(this.chart.tasks);
+    
     setTimeout(() => { this.ganttChartComponent.update(); }, 0);
     this.undoRedoService.initStateForChart(this.chart);
-  }
-
-  onTaskDelete(id: string) {
-    // Erst den Task löschen
-    this.deleteTaskById(id);
-    // Dann für Undo speichern
-    this.saveStateForUndo();
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
   }
 
   private deleteTaskById(id: string) {
@@ -314,18 +224,6 @@ availableCharts: {
     this.chart.tasks.forEach(t => {
       t.dependencies = t.dependencies.filter(d => d.taskId !== task.id);
     });
-  }
-
-  onGroupDelete(id: string) {
-    const group = this.getGroupById(id);
-    if (!group) {
-      console.log("no group to delete with id " + id);
-    }
-    else {
-      // Erst die Gruppe löschen
-      this.deleteGroup(group!);
-      // Dann für Undo speichern (wird in deleteGroup bereits gemacht)
-    }
   }
 
   private deleteGroup(group: Group) {
@@ -507,6 +405,10 @@ availableCharts: {
       this.chart =  loadedChart;
       // Cache invalidieren
       this._lastFilteredHash = '';
+      
+      // Initialize dependency cache for loaded chart
+      this.dependencyCache.rebuild(this.chart.tasks);
+      
       // Explizites Update nach Chart-Loading
       setTimeout(() => {
         setTimeout(() => { this.ganttChartComponent.update(); }, 0);
@@ -592,6 +494,8 @@ availableCharts: {
     const previousChart = this.undoRedoService.undo(this.chart);
     if (previousChart) {
       this.chart = previousChart;
+      // Synchronize dependency cache with restored chart
+      this.dependencyCache.rebuild(this.chart.tasks);
       setTimeout(() => { this.ganttChartComponent.update(); }, 0);
     }
   }
@@ -603,6 +507,8 @@ availableCharts: {
     const nextChart = this.undoRedoService.redo(this.chart);
     if (nextChart) {
       this.chart = nextChart;
+      // Synchronize dependency cache with restored chart
+      this.dependencyCache.rebuild(this.chart.tasks);
       setTimeout(() => { this.ganttChartComponent.update(); }, 0);
     }
   }
