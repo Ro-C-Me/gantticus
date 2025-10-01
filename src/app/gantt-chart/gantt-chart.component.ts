@@ -85,16 +85,169 @@ export class GanttChartComponent implements OnInit {
     
     if ('expanded' in event && event.id) {
       const newExpanded = new Set(this.expanded);
+      const wasExpanded = this.expanded.has(event.id);
+      const isNowExpanded = event.expanded;
       
-      if (event.expanded) {
+      if (isNowExpanded) {
         newExpanded.add(event.id);
       } else {
         newExpanded.delete(event.id);
       }
       
       console.log("Updated expanded set:", newExpanded);
+      
+      // Smart dependency update: Only for task items with children
+      const task = this.getTaskById(event.id);
+      if (task && task.children && task.children.length > 0) {
+        // Task has children - update aggregated dependencies reactively
+        this.updateAggregatedDependenciesForTask(task, wasExpanded, isNowExpanded || false);
+      }
+      
       this.expandedChanged.emit(newExpanded);
     }
+  }
+
+  /**
+   * Intelligently updates aggregated dependencies for a single task when its expand state changes.
+   * This avoids full updateGanttItems() calls and only updates what's necessary.
+   * 
+   * Performance: O(k) where k = number of child dependencies (vs. O(n) full update)
+   * 
+   * @param task The task whose expand state changed
+   * @param wasExpanded Previous expanded state
+   * @param isNowExpanded Current expanded state
+   */
+  private updateAggregatedDependenciesForTask(task: Task, wasExpanded: boolean, isNowExpanded: boolean): void {
+    const startTime = performance.now();
+    const parentItem = this.itemById.get(task.id);
+    
+    if (!parentItem) {
+      console.warn(`🚨 [SMART UPDATE] Parent item not found for task: ${task.id}`);
+      return;
+    }
+    
+    try {
+      if (!wasExpanded && isNowExpanded) {
+        // Task wurde AUFGEKLAPPT → Aggregierte Dependencies ENTFERNEN
+        this.removeAggregatedDependenciesForTask(task, parentItem);
+        console.log(`🔽 [SMART UPDATE] Removed aggregated dependencies for expanded task: ${task.id}`);
+        
+      } else if (wasExpanded && !isNowExpanded) {
+        // Task wurde ZUGEKLAPPT → Aggregierte Dependencies HINZUFÜGEN
+        this.addAggregatedDependenciesForTask(task, parentItem);
+        console.log(`🔼 [SMART UPDATE] Added aggregated dependencies for collapsed task: ${task.id}`);
+      }
+      
+      // Force UI update for this specific change
+      this.items = [...this.items];
+      
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      console.log(`🟢 [SMART UPDATE] Completed for ${task.id} - ${duration.toFixed(2)}ms`);
+      
+    } catch (error) {
+      console.warn(`🚨 [SMART UPDATE] Error updating dependencies for ${task.id}, falling back to full update:`, error);
+      // Graceful fallback: Full update if smart update fails
+      this.updateGanttItems();
+    }
+  }
+
+  /**
+   * Adds aggregated dependencies for a single collapsed task.
+   */
+  private addAggregatedDependenciesForTask(task: Task, parentItem: GanttItem): void {
+    const aggregatedDeps = this.collectChildDependenciesOptimized(task);
+    
+    // Eingehende Dependencies verarbeiten: dependencyTaskId → Parent
+    for (const dep of aggregatedDeps.incoming) {
+      const blockingItem = this.itemById.get(dep.taskId);
+      if (blockingItem) {
+        if (!blockingItem.links) {
+          blockingItem.links = [];
+        }
+        const ganttLink = { 
+          link: task.id, 
+          type: this.mapDependencyType(dep.type),
+          color: '#6698ff' // Blaue Farbe für aggregierte Dependencies
+        };
+        blockingItem.links.push(ganttLink);
+      } 
+    }
+    
+    // Ausgehende Dependencies verarbeiten: Parent → dependencyTaskId
+    for (const dep of aggregatedDeps.outgoing) {
+      const targetItem = this.itemById.get(dep.taskId);
+      if (targetItem) {
+        if (!parentItem.links) {
+          parentItem.links = [];
+        }
+        const ganttLink = { 
+          link: dep.taskId, 
+          type: this.mapDependencyType(dep.type),
+          color: '#6698ff' // Blaue Farbe für aggregierte Dependencies
+        };
+        parentItem.links.push(ganttLink);
+      }
+    }
+  }
+
+  /**
+   * Removes aggregated dependencies for a single expanded task.
+   * WICHTIG: Prüft ob Dependencies auch direkt existieren - entfernt nur rein aggregierte Links!
+   * 
+   * Edge Case: Wenn a1 → B (direkt) UND a1 → b1 (aggregiert zu A → B) existiert,
+   * darf beim Aufklappen von B nur die aggregierte Verbindung entfernt werden.
+   */
+  private removeAggregatedDependenciesForTask(task: Task, parentItem: GanttItem): void {
+    const aggregatedDeps = this.collectChildDependenciesOptimized(task);
+    
+    // Eingehende Dependencies entfernen: dependencyTaskId → Parent
+    for (const dep of aggregatedDeps.incoming) {
+      const blockingItem = this.itemById.get(dep.taskId);
+      if (blockingItem && blockingItem.links) {
+        blockingItem.links = blockingItem.links.filter(link => {
+          const linkTargetId = typeof link === 'string' ? link : link.link;
+          const linkType = typeof link === 'string' ? DependencyType.FS : this.mapGanttLinkType(link.type);
+          
+          // Nur entfernen wenn es der Link ist UND keine direkte Dependency existiert
+          if (linkTargetId === task.id && linkType === dep.type) {
+            return this.hasDirectDependency(dep.taskId, task.id, dep.type);
+          }
+          return true; // Andere Links behalten
+        });
+      }
+    }
+    
+    // Ausgehende Dependencies entfernen: Parent → dependencyTaskId  
+    if (parentItem.links) {
+      for (const dep of aggregatedDeps.outgoing) {
+        parentItem.links = parentItem.links.filter(link => {
+          const linkTargetId = typeof link === 'string' ? link : link.link;
+          const linkType = typeof link === 'string' ? DependencyType.FS : this.mapGanttLinkType(link.type);
+          
+          // Nur entfernen wenn es der Link ist UND keine direkte Dependency existiert
+          if (linkTargetId === dep.taskId && linkType === dep.type) {
+            return this.hasDirectDependency(task.id, dep.taskId, dep.type);
+          }
+          return true; // Andere Links behalten
+        });
+      }
+    }
+  }
+
+  /**
+   * Prüft ob eine direkte Dependency zwischen zwei Tasks existiert (nicht nur aggregiert).
+   * Verwendet DependencyCache für O(1) Lookup.
+   * 
+   * @param sourceId ID des Source-Tasks
+   * @param targetId ID des Target-Tasks  
+   * @param type Dependency-Type
+   * @returns true wenn direkte Dependency existiert, false wenn nur aggregiert
+   */
+  private hasDirectDependency(sourceId: string, targetId: string, type: DependencyType): boolean {
+    // Direkte Cache-Abfrage: Prüfe ob targetTask eine direkte Dependency zu sourceTask hat
+    const dependencies = this.dependencyCache.getDependencies(targetId);
+    return dependencies.some(dep => dep.taskId === sourceId && dep.type === type);
   }
 
   barClick($event: GanttBarClickEvent<unknown>) {
@@ -279,7 +432,7 @@ export class GanttChartComponent implements OnInit {
           sourceItem.links = [];
         }
         
-        // Create and add the new link
+        // Create and add the new link (normale Dependencies ohne spezielle Farbe)
         const newLink = this.createGanttLink(addedDep.targetId, addedDep.type);
         sourceItem.links.push(newLink);
         console.log(`🔗 [GANTT ITEMS] Added link: ${addedDep.sourceId} -${addedDep.type}-> ${addedDep.targetId}`);
@@ -296,13 +449,20 @@ export class GanttChartComponent implements OnInit {
    * Helper method to create a GanttLink from dependency information.
    * @param targetId The ID of the target task
    * @param type The dependency type
+   * @param color Optional color for the link (e.g., for aggregated dependencies)
    * @returns A GanttLink object
    */
-  private createGanttLink(targetId: string, type: DependencyType): import("@worktile/gantt").GanttLink {
-    return { 
+  private createGanttLink(targetId: string, type: DependencyType, color?: string): import("@worktile/gantt").GanttLink {
+    const link: import("@worktile/gantt").GanttLink = { 
       link: targetId, 
       type: this.mapDependencyTypeToGanttLinkType(type) 
     };
+    
+    if (color) {
+      link.color = color;
+    }
+    
+    return link;
   }
 
   /**
@@ -917,112 +1077,248 @@ export class GanttChartComponent implements OnInit {
 
   
 
+  /**
+   * High-performance dependency aggregation using DependencyCache for O(1) lookups.
+   * Only processes collapsed parent tasks and uses cached dependency relationships.
+   * 
+   * Performance: O(n) where n = number of collapsed parents (vs. previous O(n²))
+   * Memory: Minimal - reuses existing cache, no additional data structures
+   */
   private addAggregatedDependencies(): void {
-    for (const task of this.filteredTasks) {
-      const parentItem = this.itemById.get(task.id);
-      
-      // Nur für Parent-Tasks mit Children, die eingeklappt sind
-      if (parentItem && task.children && task.children.length > 0 && !parentItem.expanded) {
-        const aggregatedDeps = this.collectChildDependencies(task, new Set<string>());
-        const totalDeps = aggregatedDeps.incoming.length + aggregatedDeps.outgoing.length;
+    const startTime = performance.now();
+    let processedParents = 0;
+    let totalAggregatedDeps = 0;
+    
+    try {
+      for (const task of this.filteredTasks) {
+        const parentItem = this.itemById.get(task.id);
         
-        if (totalDeps > 0) {
-          // Eingehende Dependencies verarbeiten: dependencyTaskId → Parent
-          for (const dep of aggregatedDeps.incoming) {
-            const blockingItem = this.itemById.get(dep.taskId);
-            if (blockingItem) {
-              if (!blockingItem.links) {
-                blockingItem.links = [];
-              }
-              const ganttLink = { link: task.id, type: this.mapDependencyType(dep.type) };
-              blockingItem.links.push(ganttLink);
-            } 
-          }
+        // Nur für Parent-Tasks mit Children, die eingeklappt sind
+        if (parentItem && task.children && task.children.length > 0 && !parentItem.expanded) {
+          processedParents++;
           
-          // Ausgehende Dependencies verarbeiten: Parent → dependencyTaskId
-          for (const dep of aggregatedDeps.outgoing) {
-            const targetItem = this.itemById.get(dep.taskId);
-            if (targetItem) {
-              if (!parentItem.links) {
-                parentItem.links = [];
+          // Verwende optimierte Cache-basierte Aggregation
+          const aggregatedDeps = this.collectChildDependenciesOptimized(task);
+          const totalDeps = aggregatedDeps.incoming.length + aggregatedDeps.outgoing.length;
+          totalAggregatedDeps += totalDeps;
+          
+          if (totalDeps > 0) {
+            // Eingehende Dependencies verarbeiten: dependencyTaskId → Parent
+            for (const dep of aggregatedDeps.incoming) {
+              const blockingItem = this.itemById.get(dep.taskId);
+              if (blockingItem) {
+                if (!blockingItem.links) {
+                  blockingItem.links = [];
+                }
+                const ganttLink = { 
+                  link: task.id, 
+                  type: this.mapDependencyType(dep.type),
+                  color: '#6698ff' // Blaue Farbe für aggregierte Dependencies
+                };
+                blockingItem.links.push(ganttLink);
+              } 
+            }
+            
+            // Ausgehende Dependencies verarbeiten: Parent → dependencyTaskId
+            for (const dep of aggregatedDeps.outgoing) {
+              const targetItem = this.itemById.get(dep.taskId);
+              if (targetItem) {
+                if (!parentItem.links) {
+                  parentItem.links = [];
+                }
+                const ganttLink = { 
+                  link: dep.taskId, 
+                  type: this.mapDependencyType(dep.type),
+                  color: '#6698ff' // Blaue Farbe für aggregierte Dependencies
+                };
+                parentItem.links.push(ganttLink);
               }
-              const ganttLink = { link: dep.taskId, type: this.mapDependencyType(dep.type) };
-              parentItem.links.push(ganttLink);
             }
           }
         }
+      }
+      
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      const color = duration > 50 ? '🔴' : duration > 20 ? '🟠' : '🟢';
+      console.log(`${color} [DEPENDENCY AGGREGATION] Completed - ${duration.toFixed(2)}ms`, {
+        processedParents,
+        totalAggregatedDeps,
+        avgDepsPerParent: processedParents > 0 ? (totalAggregatedDeps / processedParents).toFixed(1) : 0
+      });
+      
+    } catch (error) {
+      console.warn('🚨 [DEPENDENCY AGGREGATION] Error during aggregation, falling back to empty dependencies:', error);
+      // Graceful degradation: Continue without aggregated dependencies rather than breaking the UI
+    }
+  }
+
+  /**
+   * HIGH-PERFORMANCE VERSION: Sammelt rekursiv alle Dependencies aller Child-Tasks
+   * unter Verwendung des DependencyCache für O(1) Lookups statt O(n²) Task-Iteration.
+   * 
+   * Performance: O(k) wo k = Anzahl der direkten und indirekten Children
+   * Memory: O(1) zusätzlicher Speicher (wiederverwendet Cache)
+   * 
+   * @param parentTask Der Parent-Task dessen Child-Dependencies aggregiert werden sollen
+   * @returns Aggregierte eingehende und ausgehende Dependencies
+   */
+  private collectChildDependenciesOptimized(parentTask: Task): { incoming: Dependency[], outgoing: Dependency[] } {
+    const debugEnabled = false; // Set to true for detailed debugging
+    const visited = new Set<string>();
+    const incomingDependencies: Dependency[] = [];
+    const outgoingDependencies: Dependency[] = [];
+    
+    if (debugEnabled) {
+      console.log(`🔍 [DEPENDENCY AGGREGATION] Starting aggregation for parent: ${parentTask.id}`);
+    }
+    
+    try {
+      this.collectChildDependenciesRecursive(parentTask, visited, incomingDependencies, outgoingDependencies, debugEnabled);
+      
+      if (debugEnabled) {
+        console.log(`🔍 [DEPENDENCY AGGREGATION] Completed for ${parentTask.id}:`, {
+          incomingCount: incomingDependencies.length,
+          outgoingCount: outgoingDependencies.length,
+          childrenProcessed: visited.size
+        });
+      }
+      
+      return { incoming: incomingDependencies, outgoing: outgoingDependencies };
+      
+    } catch (error) {
+      console.warn(`🚨 [DEPENDENCY AGGREGATION] Error processing ${parentTask.id}, returning empty dependencies:`, error);
+      // Graceful degradation: Return empty arrays instead of breaking
+      return { incoming: [], outgoing: [] };
+    }
+  }
+
+  /**
+   * Rekursive Hilfsmethode für optimierte Dependency-Sammlung.
+   * Nutzt DependencyCache für O(1) Lookups statt Task-Array-Iteration.
+   */
+  private collectChildDependenciesRecursive(
+    parentTask: Task, 
+    visited: Set<string>, 
+    incomingDependencies: Dependency[], 
+    outgoingDependencies: Dependency[],
+    debugEnabled: boolean
+  ): void {
+    if (visited.has(parentTask.id) || !parentTask.children) {
+      return;
+    }
+    
+    visited.add(parentTask.id);
+    
+    for (const childId of parentTask.children) {
+      const childTask = this.getTaskById(childId);
+      if (!childTask) {
+        if (debugEnabled) {
+          console.warn(`🚨 [DEPENDENCY AGGREGATION] Child task not found: ${childId}`);
+        }
+        continue;
+      }
+      
+      // 1. INCOMING: Verwende DependencyCache für O(1) Lookup der eingehenden Dependencies
+      const incomingFromCache = this.dependencyCache.getDependencies(childTask.id);
+      for (const cachedDep of incomingFromCache) {
+        // Cross-hierarchy dependencies: Prüfe ob die Quelle zu einem ANDEREN eingeklappten Parent gehört
+        const sourceParent = this.findCollapsedParentForTask(cachedDep.taskId);
+        
+        // Nur externe Dependencies hinzufügen (keine interne Hierarchie-Dependencies)
+        if (sourceParent !== parentTask.id && // Nicht aus der eigenen Hierarchie
+            !incomingDependencies.some(existing => 
+              existing.taskId === (sourceParent || cachedDep.taskId) && existing.type === cachedDep.type)) {
+          
+          const dep = new Dependency();
+          // Verwende den eingeklappten Parent als Quelle, falls vorhanden
+          dep.taskId = sourceParent || cachedDep.taskId;
+          dep.type = cachedDep.type;
+          incomingDependencies.push(dep);
+          
+          if (debugEnabled) {
+            const sourceDisplay = sourceParent ? `${sourceParent}(${cachedDep.taskId})` : cachedDep.taskId;
+            console.log(`🔍 [INCOMING] ${sourceDisplay} -${cachedDep.type}-> ${parentTask.id}(${childTask.id})`);
+          }
+        }
+      }
+      
+      // 2. OUTGOING: Verwende DependencyCache für O(1) Lookup der ausgehenden Dependencies  
+      const outgoingFromCache = this.dependencyCache.getDependents(childTask.id);
+      for (const cachedDep of outgoingFromCache) {
+        // Cross-hierarchy dependencies: Prüfe ob das Ziel zu einem ANDEREN eingeklappten Parent gehört
+        const targetParent = this.findCollapsedParentForTask(cachedDep.taskId);
+        
+        // Nur externe Dependencies hinzufügen (keine interne Hierarchie-Dependencies)
+        if (targetParent !== parentTask.id && // Nicht zur eigenen Hierarchie
+            !outgoingDependencies.some(existing => 
+              existing.taskId === (targetParent || cachedDep.taskId) && existing.type === cachedDep.type)) {
+          
+          const dep = new Dependency();
+          // Verwende den eingeklappten Parent als Ziel, falls vorhanden
+          dep.taskId = targetParent || cachedDep.taskId;
+          dep.type = cachedDep.type;
+          outgoingDependencies.push(dep);
+          
+          if (debugEnabled) {
+            const targetDisplay = targetParent ? `${targetParent}(${cachedDep.taskId})` : cachedDep.taskId;
+            console.log(`🔍 [OUTGOING] ${parentTask.id}(${childTask.id}) -${cachedDep.type}-> ${targetDisplay}`);
+          }
+        }
+      }
+      
+      // 3. RECURSIVE: Für Sub-Children
+      if (childTask.children && childTask.children.length > 0) {
+        this.collectChildDependenciesRecursive(childTask, visited, incomingDependencies, outgoingDependencies, debugEnabled);
       }
     }
   }
 
-  // Sammelt rekursiv alle Dependencies aller Child-Tasks
-  private collectChildDependencies(parentTask: Task, visited: Set<string>): { incoming: Dependency[], outgoing: Dependency[] } {
-    if (visited.has(parentTask.id) || !parentTask.children) {
-      return { incoming: [], outgoing: [] };
+  /**
+   * Hilfsmethode: Prüft ob eine Task-ID innerhalb einer bestimmten Parent-Hierarchie liegt.
+   * Verwendet Performance-optimierte Parent-Lookup-Maps.
+   */
+  private isTaskInHierarchy(taskId: string, parentId: string): boolean {
+    let currentId: string | undefined = taskId;
+    
+    // Aufwärts durch die Parent-Kette gehen
+    while (currentId) {
+      if (currentId === parentId) {
+        return true; // Task ist innerhalb der Hierarchie
+      }
+      currentId = this.parentByChildId.get(currentId);
     }
     
-    visited.add(parentTask.id);
-    const incomingDependencies: Dependency[] = [];
-    const outgoingDependencies: Dependency[] = [];
+    return false; // Task ist außerhalb der Hierarchie
+  }
+
+  /**
+   * Findet den eingeklappten Parent-Task für eine gegebene Task-ID.
+   * Geht die Parent-Hierarchie nach oben und gibt den ersten eingeklappten Parent zurück.
+   * 
+   * @param taskId Die Task-ID für die der eingeklappte Parent gesucht wird
+   * @returns Parent-Task-ID falls eingeklappt, undefined falls kein eingeklappter Parent gefunden
+   */
+  private findCollapsedParentForTask(taskId: string): string | undefined {
+    let currentId: string | undefined = taskId;
     
-    for (const childId of parentTask.children) {
-      const childTask = this.getTaskById(childId);
-      if (!childTask) continue;
-      
-      // 1. Eingehende Dependencies des Child-Tasks hinzufügen (wer blockiert diesen Child)
-      if (childTask.dependencies) {
-        for (const dep of childTask.dependencies) {
-          // Vermeiden von Duplikaten
-          if (!incomingDependencies.some(existing => 
-              existing.taskId === dep.taskId && existing.type === dep.type)) {
-            incomingDependencies.push(dep);
-          }
-        }
+    // Aufwärts durch die Parent-Kette gehen
+    while (currentId) {
+      const parentId = this.parentByChildId.get(currentId);
+      if (!parentId) {
+        break; // Kein Parent mehr gefunden
       }
       
-      // 2. Ausgehende Dependencies finden (wen blockiert dieser Child)
-      // Alle Tasks durchsuchen, die von diesem Child abhängen
-      this.tasks.forEach(otherTask => {
-        if (otherTask.dependencies) {
-          otherTask.dependencies.forEach(dep => {
-            if (dep.taskId === childTask.id) {
-              // otherTask hängt von childTask ab -> childTask blockiert otherTask
-              // Als ausgehende Dependency vom Parent zu otherTask darstellen
-              const outgoingDep = new Dependency();
-              outgoingDep.taskId = otherTask.id;
-              outgoingDep.type = dep.type;
-              
-              // Vermeiden von Duplikaten
-              if (!outgoingDependencies.some(existing => 
-                  existing.taskId === outgoingDep.taskId && existing.type === outgoingDep.type)) {
-                outgoingDependencies.push(outgoingDep);
-              }
-            }
-          });
-        }
-      });
-      
-      // Rekursiv für Sub-Children
-      if (childTask.children && childTask.children.length > 0) {
-        const subDependencies = this.collectChildDependencies(childTask, visited);
-        // Eingehende Dependencies hinzufügen
-        for (const subDep of subDependencies.incoming) {
-          if (!incomingDependencies.some(existing => 
-              existing.taskId === subDep.taskId && existing.type === subDep.type)) {
-            incomingDependencies.push(subDep);
-          }
-        }
-        // Ausgehende Dependencies hinzufügen
-        for (const subDep of subDependencies.outgoing) {
-          if (!outgoingDependencies.some(existing => 
-              existing.taskId === subDep.taskId && existing.type === subDep.type)) {
-            outgoingDependencies.push(subDep);
-          }
-        }
+      // Prüfen ob dieser Parent eingeklappt ist
+      const parentItem = this.itemById.get(parentId);
+      if (parentItem && parentItem.children && parentItem.children.length > 0 && !parentItem.expanded) {
+        return parentId; // Eingeklappter Parent gefunden
       }
+      
+      currentId = parentId; // Weiter nach oben gehen
     }
     
-    return { incoming: incomingDependencies, outgoing: outgoingDependencies };
+    return undefined; // Kein eingeklappter Parent gefunden
   }
 
   /**
