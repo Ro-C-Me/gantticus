@@ -1225,14 +1225,18 @@ export class GanttChartComponent implements OnInit {
         // Cross-hierarchy dependencies: Prüfe ob die Quelle zu einem ANDEREN eingeklappten Parent gehört
         const sourceParent = this.findCollapsedParentForTask(cachedDep.taskId);
         
-        // Nur externe Dependencies hinzufügen (keine interne Hierarchie-Dependencies)
+        // Self-Dependencies verhindern: A->A macht keinen Sinn
+        const effectiveSourceId = sourceParent || cachedDep.taskId;
+        
+        // Nur externe Dependencies hinzufügen (keine interne Hierarchie-Dependencies oder Self-Dependencies)
         if (sourceParent !== parentTask.id && // Nicht aus der eigenen Hierarchie
+            effectiveSourceId !== parentTask.id && // Keine Self-Dependencies (A->A)
             !incomingDependencies.some(existing => 
-              existing.taskId === (sourceParent || cachedDep.taskId) && existing.type === cachedDep.type)) {
+              existing.taskId === effectiveSourceId && existing.type === cachedDep.type)) {
           
           const dep = new Dependency();
           // Verwende den eingeklappten Parent als Quelle, falls vorhanden
-          dep.taskId = sourceParent || cachedDep.taskId;
+          dep.taskId = effectiveSourceId;
           dep.type = cachedDep.type;
           incomingDependencies.push(dep);
           
@@ -1240,6 +1244,8 @@ export class GanttChartComponent implements OnInit {
             const sourceDisplay = sourceParent ? `${sourceParent}(${cachedDep.taskId})` : cachedDep.taskId;
             console.log(`🔍 [INCOMING] ${sourceDisplay} -${cachedDep.type}-> ${parentTask.id}(${childTask.id})`);
           }
+        } else if (debugEnabled && effectiveSourceId === parentTask.id) {
+          console.log(`🚫 [INCOMING] Skipped self-dependency: ${parentTask.id}(${cachedDep.taskId}) -${cachedDep.type}-> ${parentTask.id}(${childTask.id})`);
         }
       }
       
@@ -1249,14 +1255,18 @@ export class GanttChartComponent implements OnInit {
         // Cross-hierarchy dependencies: Prüfe ob das Ziel zu einem ANDEREN eingeklappten Parent gehört
         const targetParent = this.findCollapsedParentForTask(cachedDep.taskId);
         
-        // Nur externe Dependencies hinzufügen (keine interne Hierarchie-Dependencies)
+        // Self-Dependencies verhindern: A->A macht keinen Sinn
+        const effectiveTargetId = targetParent || cachedDep.taskId;
+        
+        // Nur externe Dependencies hinzufügen (keine interne Hierarchie-Dependencies oder Self-Dependencies)
         if (targetParent !== parentTask.id && // Nicht zur eigenen Hierarchie
+            effectiveTargetId !== parentTask.id && // Keine Self-Dependencies (A->A)
             !outgoingDependencies.some(existing => 
-              existing.taskId === (targetParent || cachedDep.taskId) && existing.type === cachedDep.type)) {
+              existing.taskId === effectiveTargetId && existing.type === cachedDep.type)) {
           
           const dep = new Dependency();
           // Verwende den eingeklappten Parent als Ziel, falls vorhanden
-          dep.taskId = targetParent || cachedDep.taskId;
+          dep.taskId = effectiveTargetId;
           dep.type = cachedDep.type;
           outgoingDependencies.push(dep);
           
@@ -1264,6 +1274,8 @@ export class GanttChartComponent implements OnInit {
             const targetDisplay = targetParent ? `${targetParent}(${cachedDep.taskId})` : cachedDep.taskId;
             console.log(`🔍 [OUTGOING] ${parentTask.id}(${childTask.id}) -${cachedDep.type}-> ${targetDisplay}`);
           }
+        } else if (debugEnabled && effectiveTargetId === parentTask.id) {
+          console.log(`🚫 [OUTGOING] Skipped self-dependency: ${parentTask.id}(${childTask.id}) -${cachedDep.type}-> ${parentTask.id}(${cachedDep.taskId})`);
         }
       }
       
