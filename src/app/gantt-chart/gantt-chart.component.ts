@@ -165,10 +165,14 @@ export class GanttChartComponent implements OnInit {
         if (!blockingItem.links) {
           blockingItem.links = [];
         }
+        // Intelligent blockierungsbasierte Farbcodierung
+        const childDetails: Array<{sourceId: string, targetId: string, type: DependencyType}> = []; // Fallback: leeres Array
+        const color = this.getAggregatedDependencyColor(dep.taskId, task.id, dep.type, childDetails);
+        
         const ganttLink = { 
           link: task.id, 
           type: this.mapDependencyType(dep.type),
-          color: '#6698ff' // Blaue Farbe für aggregierte Dependencies
+          color: color // ROT für blockiert, GRAU für OK
         };
         blockingItem.links.push(ganttLink);
       } 
@@ -181,10 +185,14 @@ export class GanttChartComponent implements OnInit {
         if (!parentItem.links) {
           parentItem.links = [];
         }
+        // Intelligent blockierungsbasierte Farbcodierung
+        const childDetails: Array<{sourceId: string, targetId: string, type: DependencyType}> = []; // Fallback: leeres Array
+        const color = this.getAggregatedDependencyColor(task.id, dep.taskId, dep.type, childDetails);
+        
         const ganttLink = { 
           link: dep.taskId, 
           type: this.mapDependencyType(dep.type),
-          color: '#6698ff' // Blaue Farbe für aggregierte Dependencies
+          color: color // ROT für blockiert, GRAU für OK
         };
         parentItem.links.push(ganttLink);
       }
@@ -248,6 +256,161 @@ export class GanttChartComponent implements OnInit {
     // Direkte Cache-Abfrage: Prüfe ob targetTask eine direkte Dependency zu sourceTask hat
     const dependencies = this.dependencyCache.getDependencies(targetId);
     return dependencies.some(dep => dep.taskId === sourceId && dep.type === type);
+  }
+
+  /**
+   * Prüft ob eine Dependency zwischen zwei Tasks eine Blockierung verursacht.
+   * Verwendet computedStart/computedEnd für exakte Datumsvergleiche.
+   * 
+   * @param sourceTask Der blockierende Task (Predecessor)
+   * @param targetTask Der blockierte Task (Successor)
+   * @param dependencyType Der Dependency-Typ (FS, FF, SS, SF)
+   * @returns true wenn Blockierung vorliegt, false wenn ok
+   */
+  private isDependencyBlocked(sourceTask: Task, targetTask: Task, dependencyType: DependencyType): boolean {
+    // Fehlende Daten -> ROT (unsicher = blockiert)
+    if (!sourceTask.computedStart || !sourceTask.computedEnd || 
+        !targetTask.computedStart || !targetTask.computedEnd) {
+      return true;
+    }
+    
+    const sourceStart = sourceTask.computedStart.getTime();
+    const sourceEnd = sourceTask.computedEnd.getTime();
+    const targetStart = targetTask.computedStart.getTime();
+    const targetEnd = targetTask.computedEnd.getTime();
+    
+    switch (dependencyType) {
+      case DependencyType.FS: // Finish-to-Start
+        return sourceEnd > targetStart; // Source muss vor Target enden
+        
+      case DependencyType.FF: // Finish-to-Finish
+        return sourceEnd > targetEnd; // Source muss vor oder gleichzeitig mit Target enden
+        
+      case DependencyType.SS: // Start-to-Start
+        return sourceStart > targetStart; // Source muss vor oder gleichzeitig mit Target starten
+        
+      case DependencyType.SF: // Start-to-Finish
+        return sourceStart > targetEnd; // Source muss vor Target-Ende starten
+        
+      default:
+        return true; // Unbekannter Typ -> ROT
+    }
+  }
+
+  /**
+   * Bestimmt die Farbe für eine aggregierte Dependency basierend auf Blockierungen.
+   * 
+   * @param sourceTaskId ID des Source-Tasks
+   * @param targetTaskId ID des Target-Tasks
+   * @param dependencyType Der Dependency-Typ
+   * @param childDependencies Array aller Child-Dependencies die diese Aggregation repräsentiert
+   * @returns '#FF7575' für blockiert (ROT), '#cacaca' für ok (GRAU)
+   */
+  private getAggregatedDependencyColor(sourceTaskId: string, targetTaskId: string, dependencyType: DependencyType, childDependencies: Array<{sourceId: string, targetId: string, type: DependencyType}>): string {
+    const sourceTask = this.getTaskById(sourceTaskId);
+    const targetTask = this.getTaskById(targetTaskId);
+    
+    if (!sourceTask || !targetTask) {
+      return '#FF7575'; // ROT bei fehlenden Tasks
+    }
+    
+    // Sammle echte Child-Dependencies wenn keine übergeben wurden
+    let actualChildDeps = childDependencies;
+    if (childDependencies.length === 0) {
+      actualChildDeps = this.getActualChildDependencies(sourceTaskId, targetTaskId, dependencyType);
+    }
+    
+    // Fallback: Wenn immer noch keine Child-Dependencies gefunden, prüfe aggregierte Dependency direkt
+    if (actualChildDeps.length === 0) {
+      return this.isDependencyBlocked(sourceTask, targetTask, dependencyType) ? '#FF7575' : '#cacaca';
+    }
+    
+    // Prüfe alle Child-Dependencies auf Blockierungen
+    for (const childDep of actualChildDeps) {
+      const childSource = this.getTaskById(childDep.sourceId);
+      const childTarget = this.getTaskById(childDep.targetId);
+      
+      if (childSource && childTarget) {
+        if (this.isDependencyBlocked(childSource, childTarget, childDep.type)) {
+          return '#FF7575'; // ROT - mindestens eine Child-Dependency ist blockiert
+        }
+      } else {
+        return '#FF7575'; // ROT bei fehlenden Child-Tasks
+      }
+    }
+    
+    return '#cacaca'; // GRAU - alle Child-Dependencies sind ok
+  }
+
+  /**
+   * Sammelt die echten Child-Dependencies für eine aggregierte Verbindung.
+   * 
+   * @param sourceTaskId ID des aggregierten Source-Tasks 
+   * @param targetTaskId ID des aggregierten Target-Tasks
+   * @param dependencyType Der aggregierte Dependency-Typ
+   * @returns Array der echten Child-Dependencies
+   */
+  private getActualChildDependencies(sourceTaskId: string, targetTaskId: string, dependencyType: DependencyType): Array<{sourceId: string, targetId: string, type: DependencyType}> {
+    const childDeps: Array<{sourceId: string, targetId: string, type: DependencyType}> = [];
+    
+    const sourceTask = this.getTaskById(sourceTaskId);
+    const targetTask = this.getTaskById(targetTaskId);
+    
+    if (!sourceTask || !targetTask) {
+      return childDeps;
+    }
+    
+    // Fall 1: Source ist eingeklappt, Target ist direkt -> finde Source-Children die zu Target führen
+    if (sourceTask.children && sourceTask.children.length > 0) {
+      for (const sourceChildId of sourceTask.children) {
+        const dependents = this.dependencyCache.getDependents(sourceChildId);
+        for (const dep of dependents) {
+          if (dep.taskId === targetTaskId && dep.type === dependencyType) {
+            childDeps.push({
+              sourceId: sourceChildId,
+              targetId: targetTaskId, 
+              type: dep.type
+            });
+          }
+        }
+      }
+    }
+    
+    // Fall 2: Source ist direkt, Target ist eingeklappt -> finde Target-Children die von Source kommen
+    if (targetTask.children && targetTask.children.length > 0) {
+      for (const targetChildId of targetTask.children) {
+        const dependencies = this.dependencyCache.getDependencies(targetChildId);
+        for (const dep of dependencies) {
+          if (dep.taskId === sourceTaskId && dep.type === dependencyType) {
+            childDeps.push({
+              sourceId: sourceTaskId,
+              targetId: targetChildId,
+              type: dep.type
+            });
+          }
+        }
+      }
+    }
+    
+    // Fall 3: Beide sind eingeklappt -> rekursive Suche in beiden Hierarchien
+    if (sourceTask.children && sourceTask.children.length > 0 && targetTask.children && targetTask.children.length > 0) {
+      for (const sourceChildId of sourceTask.children) {
+        for (const targetChildId of targetTask.children) {
+          const dependencies = this.dependencyCache.getDependencies(targetChildId);
+          for (const dep of dependencies) {
+            if (dep.taskId === sourceChildId && dep.type === dependencyType) {
+              childDeps.push({
+                sourceId: sourceChildId,
+                targetId: targetChildId,
+                type: dep.type
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    return childDeps;
   }
 
   barClick($event: GanttBarClickEvent<unknown>) {
@@ -1110,10 +1273,14 @@ export class GanttChartComponent implements OnInit {
                 if (!blockingItem.links) {
                   blockingItem.links = [];
                 }
+                // Intelligent blockierungsbasierte Farbcodierung
+                const childDetails: Array<{sourceId: string, targetId: string, type: DependencyType}> = []; // Fallback: leeres Array
+                const color = this.getAggregatedDependencyColor(dep.taskId, task.id, dep.type, childDetails);
+                
                 const ganttLink = { 
                   link: task.id, 
                   type: this.mapDependencyType(dep.type),
-                  color: '#6698ff' // Blaue Farbe für aggregierte Dependencies
+                  color: color // ROT für blockiert, GRAU für OK
                 };
                 blockingItem.links.push(ganttLink);
               } 
@@ -1126,10 +1293,14 @@ export class GanttChartComponent implements OnInit {
                 if (!parentItem.links) {
                   parentItem.links = [];
                 }
+                // Intelligent blockierungsbasierte Farbcodierung
+                const childDetails: Array<{sourceId: string, targetId: string, type: DependencyType}> = []; // Fallback: leeres Array
+                const color = this.getAggregatedDependencyColor(task.id, dep.taskId, dep.type, childDetails);
+                
                 const ganttLink = { 
                   link: dep.taskId, 
                   type: this.mapDependencyType(dep.type),
-                  color: '#6698ff' // Blaue Farbe für aggregierte Dependencies
+                  color: color // ROT für blockiert, GRAU für OK
                 };
                 parentItem.links.push(ganttLink);
               }
