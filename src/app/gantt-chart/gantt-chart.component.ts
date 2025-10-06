@@ -364,10 +364,142 @@ export class GanttChartComponent implements OnInit {
       
       console.log(`Task ${task.id} dragged: ${task.start} - ${task.end}`);
       
+      // CRITICAL: Aktualisiere aggregierte Dependencies nach Task-Verschiebung
+      console.log(`🔍 [DEBUG] Calling refreshAggregatedDependencies for task: ${task.id}`);
+      this.refreshAggregatedDependencies(task);
+      
       // Benachrichtige Parent über Änderung
       this.dataChanged.emit('task-updated');
     }
   }
+  /**
+   * Aktualisiert alle betroffenen aggregierten Dependencies nach einer Task-Änderung.
+   * Wird verwendet nach: Task-Verschiebung, Task-Edit, oder anderen Zeitraum-Änderungen.
+   * Findet alle eingeklappten Parents die von der Änderung betroffen sind und aktualisiert deren Farben.
+   * 
+   * @param changedTask Der veränderte Task
+   */
+  private refreshAggregatedDependencies(changedTask: Task): void {
+    const startTime = performance.now();
+    let updatedParents = 0;
+    
+    console.log(`🔄 [DEPENDENCY REFRESH] Starting refresh for task: ${changedTask.id}`);
+    
+    try {
+      // 1. Finde alle eingeklappten Parent-Tasks die von diesem Task betroffen sind
+      // Das schließt ein: Parents des Tasks UND Parents von Tasks die Dependencies zu/von diesem Task haben
+      const affectedParents = this.findAllAffectedCollapsedParents(changedTask.id);
+      console.log(`🔄 [DEPENDENCY REFRESH] Found ${affectedParents.length} affected parents:`, affectedParents);
+      
+      // 2. Aktualisiere aggregierte Dependencies für alle betroffenen Parents
+      for (const parentId of affectedParents) {
+        const parentTask = this.getTaskById(parentId);
+        const parentItem = this.itemById.get(parentId);
+        
+        if (parentTask && parentItem) {
+          console.log(`🔄 [DEPENDENCY REFRESH] Updating parent: ${parentId}`);
+          
+          // Entferne alte aggregierte Dependencies
+          this.removeAggregatedDependenciesForTask(parentTask, parentItem);
+          
+          // Füge neue aggregierte Dependencies mit aktualisierten Farben hinzu
+          this.addAggregatedDependenciesForTask(parentTask, parentItem);
+          
+          updatedParents++;
+        }
+      }
+      
+      // 3. Force UI update wenn Dependencies aktualisiert wurden
+      if (updatedParents > 0) {
+        this.items = [...this.items];
+        console.log(`🔄 [DEPENDENCY REFRESH] Forced UI update`);
+      }
+      
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      console.log(`🔄 [DEPENDENCY REFRESH] Completed refresh - ${duration.toFixed(2)}ms`, {
+        changedTask: changedTask.id,
+        affectedParents: updatedParents
+      });
+      
+    } catch (error) {
+      console.warn(`🚨 [DEPENDENCY REFRESH] Error refreshing dependencies for ${changedTask.id}:`, error);
+      // Graceful fallback: Full update if incremental update fails
+      console.log(`🚨 [DEPENDENCY REFRESH] Falling back to full updateGanttItems()`);
+      this.updateGanttItems();
+    }
+  }
+
+  /**
+   * Findet ALLE eingeklappten Parent-Tasks die von einer Task-Änderung betroffen sind.
+   * Das schließt ein:
+   * 1. Direkte Parents des geänderten Tasks
+   * 2. Parents von Tasks die Dependencies ZU dem geänderten Task haben  
+   * 3. Parents von Tasks die Dependencies VOM geänderten Task haben
+   * 
+   * @param taskId Die ID des geänderten Tasks
+   * @returns Array von Parent-Task-IDs die eingeklappt sind und betroffen sind
+   */
+  private findAllAffectedCollapsedParents(taskId: string): string[] {
+    const affectedParents = new Set<string>();
+    
+    console.log(`🔍 [PARENT SEARCH] Searching affected parents for task: ${taskId}`);
+    
+    // 1. Direkte Parents des geänderten Tasks
+    const directParents = this.findAffectedCollapsedParents(taskId);
+    directParents.forEach(p => affectedParents.add(p));
+    console.log(`🔍 [PARENT SEARCH] Direct parents: ${directParents.length}`, directParents);
+    
+    // 2. Parents von Tasks die Dependencies ZU dem geänderten Task haben (incoming)
+    const incomingDeps = this.dependencyCache.getDependencies(taskId);
+    for (const dep of incomingDeps) {
+      const sourceParents = this.findAffectedCollapsedParents(dep.taskId);
+      sourceParents.forEach(p => affectedParents.add(p));
+    }
+    console.log(`🔍 [PARENT SEARCH] Incoming dependency sources: ${incomingDeps.length}`, incomingDeps.map(d => d.taskId));
+    
+    // 3. Parents von Tasks die Dependencies VOM geänderten Task haben (outgoing)  
+    const outgoingDeps = this.dependencyCache.getDependents(taskId);
+    for (const dep of outgoingDeps) {
+      const targetParents = this.findAffectedCollapsedParents(dep.taskId);
+      targetParents.forEach(p => affectedParents.add(p));
+    }
+    console.log(`🔍 [PARENT SEARCH] Outgoing dependency targets: ${outgoingDeps.length}`, outgoingDeps.map(d => d.taskId));
+    
+    const result = Array.from(affectedParents);
+    console.log(`🔍 [PARENT SEARCH] Total unique affected parents: ${result.length}`, result);
+    return result;
+  }
+
+  /**
+   * Findet alle eingeklappten Parent-Tasks die den gegebenen Task als Child haben (direkt oder indirekt).
+   * 
+   * @param taskId Die ID des Tasks für den eingeklappte Parents gesucht werden
+   * @returns Array von Parent-Task-IDs die eingeklappt sind und den Task enthalten
+   */
+  private findAffectedCollapsedParents(taskId: string): string[] {
+    const affectedParents: string[] = [];
+    let currentId: string | undefined = taskId;
+    
+    // Aufwärts durch die Parent-Hierarchie gehen
+    while (currentId) {
+      const parentId = this.parentByChildId.get(currentId);
+      if (!parentId) {
+        break; // Kein Parent mehr gefunden
+      }
+      
+      // Prüfen ob dieser Parent eingeklappt ist
+      const parentItem = this.itemById.get(parentId);
+      if (parentItem && parentItem.children && parentItem.children.length > 0 && !parentItem.expanded) {
+        affectedParents.push(parentId);
+      }
+      
+      currentId = parentId; // Weiter nach oben gehen
+    }
+    
+    return affectedParents;
+  }
+
   private mapGanttLinkType(type: GanttLinkType): DependencyType {
     switch (type) {
       case GanttLinkType.fs:
@@ -701,6 +833,10 @@ export class GanttChartComponent implements OnInit {
           // Update dependencies using the shared dependency service
           const changeSet = this.dependencyCache.updateTaskDependencies(updatedTask.id, updatedTask.dependencies);
           this.applyDependencyChangesToGanttItems(changeSet);
+          
+          // CRITICAL: Aktualisiere aggregierte Dependencies nach Task-Edit
+          console.log(`🔍 [DEBUG] Calling refreshAggregatedDependencies after task edit: ${updatedTask.id}`);
+          this.refreshAggregatedDependencies(updatedTask);
 
           // TODO aggregation
           // TODO update filter?
