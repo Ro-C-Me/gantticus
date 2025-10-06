@@ -24,7 +24,7 @@
     "@worktile/gantt": "file:../ngx-gantt/dist/gantt",
     "bootstrap": "^5.3.6",
     "date-fns": "^4.1.0",
-    "html2canvas": "^1.4.1",
+    "html2canvas": "1.0.0-rc.7",
     "ngx-color-picker": "^20.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "~7.8.0",

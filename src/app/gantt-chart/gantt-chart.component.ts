@@ -20,6 +20,7 @@ export class GanttChartComponent implements OnInit {
   @Input() groups: Group[] = [];
   @Input() filteredTaskIds: string[] = [];
   @Input() expanded: Set<string> = new Set();
+  @Input() chartId: string = 'gantt-chart';
 
   @Output() dataChanged = new EventEmitter<string>();
   @Output() expandedChanged = new EventEmitter<Set<string>>();
