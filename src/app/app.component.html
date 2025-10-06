@@ -116,13 +116,16 @@
       
       <!-- Export-Dropdown -->
       <div ngbDropdown class="btn-group">
-        <button class="btn btn-outline-secondary" (click)="onHtmlExport()" title="HTML Export in Zwischenablage">
-          <i class="bi bi-table"></i>
+        <button class="btn btn-outline-secondary" (click)="onImageExport()" title="Gantt-Chart als Bild exportieren">
+          <i class="bi bi-image"></i>
         </button>
         <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" ngbDropdownToggle>
           <span class="visually-hidden">Export-Optionen öffnen</span>
         </button>
         <div ngbDropdownMenu>
+          <button class="dropdown-item" (click)="onImageExport()">
+            <i class="bi bi-image"></i> Image Export
+          </button>
           <button class="dropdown-item" (click)="onHtmlExport()">
             <i class="bi bi-table"></i> HTML Export
           </button>
@@ -274,6 +277,7 @@
   [groups]="chart.groups"
   [filteredTaskIds]="filteredTaskIds"
   [expanded]="chart.expanded"
+  [chartId]="'gantt-chart'"
   (dataChanged)="onGanttDataChanged($event)"
   (expandedChanged)="onGanttExpandedChanged($event)"
   (taskAddRequest)="onAddTask($event)">

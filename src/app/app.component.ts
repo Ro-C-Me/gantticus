@@ -1,5 +1,5 @@
 import { Component, ViewChild, ElementRef, HostListener } from '@angular/core';
-import { GanttItem, GanttViewType, GanttToolbarOptions } from '@worktile/gantt';
+import { GanttItem, GanttViewType, GanttToolbarOptions, GanttPrintService } from '@worktile/gantt';
 import { Group, Status, Task } from './domain/Task';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
@@ -18,7 +18,8 @@ import { DependencyCache } from './gantt-chart/dependency-cache';
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
-  standalone: false
+  standalone: false,
+  providers: [GanttPrintService]
 })
 export class AppComponent {
   @ViewChild(GanttChartComponent) ganttChartComponent!: GanttChartComponent;
@@ -160,7 +161,8 @@ availableCharts: {
     private undoRedoService: UndoRedoService,
     private route: ActivatedRoute,
     private toastService: ToastService,
-    private dependencyCache: DependencyCache
+    private dependencyCache: DependencyCache,
+    private ganttPrintService: GanttPrintService
   ) {
     this.initWithNewChart();
 
@@ -524,6 +526,17 @@ availableCharts: {
     } catch (error) {
       console.error('Fehler beim Kopieren in die Zwischenablage:', error);
       this.showToast('Fehler beim Export', 'Die Daten konnten nicht in die Zwischenablage kopiert werden.', 'error');
+    }
+  }
+
+  // Bild-Export des Gantt-Charts
+  async onImageExport() {
+    try {
+      this.ganttPrintService.print('gantt-chart');
+      this.showToast('Bild Export gestartet', 'Das Gantt-Chart wird als Bild heruntergeladen.', 'info');
+    } catch (error) {
+      console.error('Fehler beim Bild-Export:', error);
+      this.showToast('Fehler beim Export', 'Das Gantt-Chart konnte nicht als Bild exportiert werden.', 'error');
     }
   }
 
