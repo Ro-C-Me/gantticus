@@ -156,17 +156,18 @@ export class GanttChartComponent implements OnInit {
    * Adds aggregated dependencies for a single collapsed task.
    */
   private addAggregatedDependenciesForTask(task: Task, parentItem: GanttItem): void {
-    const aggregatedDeps = this.collectChildDependenciesOptimized(task);
+    const aggregationResult = this.collectChildDependenciesOptimized(task);
     
     // Eingehende Dependencies verarbeiten: dependencyTaskId → Parent
-    for (const dep of aggregatedDeps.incoming) {
+    for (const dep of aggregationResult.incoming) {
       const blockingItem = this.itemById.get(dep.taskId);
       if (blockingItem) {
         if (!blockingItem.links) {
           blockingItem.links = [];
         }
-        // Intelligent blockierungsbasierte Farbcodierung
-        const childDetails: Array<{sourceId: string, targetId: string, type: DependencyType}> = []; // Fallback: leeres Array
+        // Intelligent blockierungsbasierte Farbcodierung mit echten Child-Details
+        const key = `${dep.taskId}->${task.id}-${dep.type}`;
+        const childDetails = aggregationResult.childDetails.get(key) || [];
         const color = this.getAggregatedDependencyColor(dep.taskId, task.id, dep.type, childDetails);
         
         const ganttLink = { 
@@ -179,14 +180,15 @@ export class GanttChartComponent implements OnInit {
     }
     
     // Ausgehende Dependencies verarbeiten: Parent → dependencyTaskId
-    for (const dep of aggregatedDeps.outgoing) {
+    for (const dep of aggregationResult.outgoing) {
       const targetItem = this.itemById.get(dep.taskId);
       if (targetItem) {
         if (!parentItem.links) {
           parentItem.links = [];
         }
-        // Intelligent blockierungsbasierte Farbcodierung
-        const childDetails: Array<{sourceId: string, targetId: string, type: DependencyType}> = []; // Fallback: leeres Array
+        // Intelligent blockierungsbasierte Farbcodierung mit echten Child-Details
+        const key = `${task.id}->${dep.taskId}-${dep.type}`;
+        const childDetails = aggregationResult.childDetails.get(key) || [];
         const color = this.getAggregatedDependencyColor(task.id, dep.taskId, dep.type, childDetails);
         
         const ganttLink = { 
@@ -207,10 +209,10 @@ export class GanttChartComponent implements OnInit {
    * darf beim Aufklappen von B nur die aggregierte Verbindung entfernt werden.
    */
   private removeAggregatedDependenciesForTask(task: Task, parentItem: GanttItem): void {
-    const aggregatedDeps = this.collectChildDependenciesOptimized(task);
+    const aggregationResult = this.collectChildDependenciesOptimized(task);
     
     // Eingehende Dependencies entfernen: dependencyTaskId → Parent
-    for (const dep of aggregatedDeps.incoming) {
+    for (const dep of aggregationResult.incoming) {
       const blockingItem = this.itemById.get(dep.taskId);
       if (blockingItem && blockingItem.links) {
         blockingItem.links = blockingItem.links.filter(link => {
@@ -228,7 +230,7 @@ export class GanttChartComponent implements OnInit {
     
     // Ausgehende Dependencies entfernen: Parent → dependencyTaskId  
     if (parentItem.links) {
-      for (const dep of aggregatedDeps.outgoing) {
+      for (const dep of aggregationResult.outgoing) {
         parentItem.links = parentItem.links.filter(link => {
           const linkTargetId = typeof link === 'string' ? link : link.link;
           const linkType = typeof link === 'string' ? DependencyType.FS : this.mapGanttLinkType(link.type);
@@ -314,19 +316,13 @@ export class GanttChartComponent implements OnInit {
       return '#FF7575'; // ROT bei fehlenden Tasks
     }
     
-    // Sammle echte Child-Dependencies wenn keine übergeben wurden
-    let actualChildDeps = childDependencies;
+    // Fallback: Wenn keine Child-Dependencies übergeben wurden, prüfe aggregierte Dependency direkt
     if (childDependencies.length === 0) {
-      actualChildDeps = this.getActualChildDependencies(sourceTaskId, targetTaskId, dependencyType);
-    }
-    
-    // Fallback: Wenn immer noch keine Child-Dependencies gefunden, prüfe aggregierte Dependency direkt
-    if (actualChildDeps.length === 0) {
       return this.isDependencyBlocked(sourceTask, targetTask, dependencyType) ? '#FF7575' : '#cacaca';
     }
     
     // Prüfe alle Child-Dependencies auf Blockierungen
-    for (const childDep of actualChildDeps) {
+    for (const childDep of childDependencies) {
       const childSource = this.getTaskById(childDep.sourceId);
       const childTarget = this.getTaskById(childDep.targetId);
       
@@ -340,77 +336,6 @@ export class GanttChartComponent implements OnInit {
     }
     
     return '#cacaca'; // GRAU - alle Child-Dependencies sind ok
-  }
-
-  /**
-   * Sammelt die echten Child-Dependencies für eine aggregierte Verbindung.
-   * 
-   * @param sourceTaskId ID des aggregierten Source-Tasks 
-   * @param targetTaskId ID des aggregierten Target-Tasks
-   * @param dependencyType Der aggregierte Dependency-Typ
-   * @returns Array der echten Child-Dependencies
-   */
-  private getActualChildDependencies(sourceTaskId: string, targetTaskId: string, dependencyType: DependencyType): Array<{sourceId: string, targetId: string, type: DependencyType}> {
-    const childDeps: Array<{sourceId: string, targetId: string, type: DependencyType}> = [];
-    
-    const sourceTask = this.getTaskById(sourceTaskId);
-    const targetTask = this.getTaskById(targetTaskId);
-    
-    if (!sourceTask || !targetTask) {
-      return childDeps;
-    }
-    
-    // Fall 1: Source ist eingeklappt, Target ist direkt -> finde Source-Children die zu Target führen
-    if (sourceTask.children && sourceTask.children.length > 0) {
-      for (const sourceChildId of sourceTask.children) {
-        const dependents = this.dependencyCache.getDependents(sourceChildId);
-        for (const dep of dependents) {
-          if (dep.taskId === targetTaskId && dep.type === dependencyType) {
-            childDeps.push({
-              sourceId: sourceChildId,
-              targetId: targetTaskId, 
-              type: dep.type
-            });
-          }
-        }
-      }
-    }
-    
-    // Fall 2: Source ist direkt, Target ist eingeklappt -> finde Target-Children die von Source kommen
-    if (targetTask.children && targetTask.children.length > 0) {
-      for (const targetChildId of targetTask.children) {
-        const dependencies = this.dependencyCache.getDependencies(targetChildId);
-        for (const dep of dependencies) {
-          if (dep.taskId === sourceTaskId && dep.type === dependencyType) {
-            childDeps.push({
-              sourceId: sourceTaskId,
-              targetId: targetChildId,
-              type: dep.type
-            });
-          }
-        }
-      }
-    }
-    
-    // Fall 3: Beide sind eingeklappt -> rekursive Suche in beiden Hierarchien
-    if (sourceTask.children && sourceTask.children.length > 0 && targetTask.children && targetTask.children.length > 0) {
-      for (const sourceChildId of sourceTask.children) {
-        for (const targetChildId of targetTask.children) {
-          const dependencies = this.dependencyCache.getDependencies(targetChildId);
-          for (const dep of dependencies) {
-            if (dep.taskId === sourceChildId && dep.type === dependencyType) {
-              childDeps.push({
-                sourceId: sourceChildId,
-                targetId: targetChildId,
-                type: dep.type
-              });
-            }
-          }
-        }
-      }
-    }
-    
-    return childDeps;
   }
 
   barClick($event: GanttBarClickEvent<unknown>) {
@@ -1261,20 +1186,21 @@ export class GanttChartComponent implements OnInit {
           processedParents++;
           
           // Verwende optimierte Cache-basierte Aggregation
-          const aggregatedDeps = this.collectChildDependenciesOptimized(task);
-          const totalDeps = aggregatedDeps.incoming.length + aggregatedDeps.outgoing.length;
+          const aggregationResult = this.collectChildDependenciesOptimized(task);
+          const totalDeps = aggregationResult.incoming.length + aggregationResult.outgoing.length;
           totalAggregatedDeps += totalDeps;
           
           if (totalDeps > 0) {
             // Eingehende Dependencies verarbeiten: dependencyTaskId → Parent
-            for (const dep of aggregatedDeps.incoming) {
+            for (const dep of aggregationResult.incoming) {
               const blockingItem = this.itemById.get(dep.taskId);
               if (blockingItem) {
                 if (!blockingItem.links) {
                   blockingItem.links = [];
                 }
-                // Intelligent blockierungsbasierte Farbcodierung
-                const childDetails: Array<{sourceId: string, targetId: string, type: DependencyType}> = []; // Fallback: leeres Array
+                // Intelligent blockierungsbasierte Farbcodierung mit echten Child-Details
+                const key = `${dep.taskId}->${task.id}-${dep.type}`;
+                const childDetails = aggregationResult.childDetails.get(key) || [];
                 const color = this.getAggregatedDependencyColor(dep.taskId, task.id, dep.type, childDetails);
                 
                 const ganttLink = { 
@@ -1287,14 +1213,15 @@ export class GanttChartComponent implements OnInit {
             }
             
             // Ausgehende Dependencies verarbeiten: Parent → dependencyTaskId
-            for (const dep of aggregatedDeps.outgoing) {
+            for (const dep of aggregationResult.outgoing) {
               const targetItem = this.itemById.get(dep.taskId);
               if (targetItem) {
                 if (!parentItem.links) {
                   parentItem.links = [];
                 }
-                // Intelligent blockierungsbasierte Farbcodierung
-                const childDetails: Array<{sourceId: string, targetId: string, type: DependencyType}> = []; // Fallback: leeres Array
+                // Intelligent blockierungsbasierte Farbcodierung mit echten Child-Details
+                const key = `${task.id}->${dep.taskId}-${dep.type}`;
+                const childDetails = aggregationResult.childDetails.get(key) || [];
                 const color = this.getAggregatedDependencyColor(task.id, dep.taskId, dep.type, childDetails);
                 
                 const ganttLink = { 
@@ -1332,20 +1259,25 @@ export class GanttChartComponent implements OnInit {
    * Memory: O(1) zusätzlicher Speicher (wiederverwendet Cache)
    * 
    * @param parentTask Der Parent-Task dessen Child-Dependencies aggregiert werden sollen
-   * @returns Aggregierte eingehende und ausgehende Dependencies
+   * @returns Aggregierte eingehende und ausgehende Dependencies mit Child-Details
    */
-  private collectChildDependenciesOptimized(parentTask: Task): { incoming: Dependency[], outgoing: Dependency[] } {
+  private collectChildDependenciesOptimized(parentTask: Task): { 
+    incoming: Dependency[], 
+    outgoing: Dependency[],
+    childDetails: Map<string, Array<{sourceId: string, targetId: string, type: DependencyType}>>
+  } {
     const debugEnabled = false; // Set to true for detailed debugging
     const visited = new Set<string>();
     const incomingDependencies: Dependency[] = [];
     const outgoingDependencies: Dependency[] = [];
+    const childDetails = new Map<string, Array<{sourceId: string, targetId: string, type: DependencyType}>>();
     
     if (debugEnabled) {
       console.log(`🔍 [DEPENDENCY AGGREGATION] Starting aggregation for parent: ${parentTask.id}`);
     }
     
     try {
-      this.collectChildDependenciesRecursive(parentTask, visited, incomingDependencies, outgoingDependencies, debugEnabled);
+      this.collectChildDependenciesRecursive(parentTask, visited, incomingDependencies, outgoingDependencies, childDetails, debugEnabled);
       
       if (debugEnabled) {
         console.log(`🔍 [DEPENDENCY AGGREGATION] Completed for ${parentTask.id}:`, {
@@ -1355,12 +1287,12 @@ export class GanttChartComponent implements OnInit {
         });
       }
       
-      return { incoming: incomingDependencies, outgoing: outgoingDependencies };
+      return { incoming: incomingDependencies, outgoing: outgoingDependencies, childDetails };
       
     } catch (error) {
       console.warn(`🚨 [DEPENDENCY AGGREGATION] Error processing ${parentTask.id}, returning empty dependencies:`, error);
       // Graceful degradation: Return empty arrays instead of breaking
-      return { incoming: [], outgoing: [] };
+      return { incoming: [], outgoing: [], childDetails: new Map() };
     }
   }
 
@@ -1373,6 +1305,7 @@ export class GanttChartComponent implements OnInit {
     visited: Set<string>, 
     incomingDependencies: Dependency[], 
     outgoingDependencies: Dependency[],
+    childDetails: Map<string, Array<{sourceId: string, targetId: string, type: DependencyType}>>,
     debugEnabled: boolean
   ): void {
     if (visited.has(parentTask.id) || !parentTask.children) {
@@ -1411,6 +1344,17 @@ export class GanttChartComponent implements OnInit {
           dep.type = cachedDep.type;
           incomingDependencies.push(dep);
           
+          // Child-Details für diese aggregierte Dependency sammeln
+          const key = `${effectiveSourceId}->${parentTask.id}-${cachedDep.type}`;
+          if (!childDetails.has(key)) {
+            childDetails.set(key, []);
+          }
+          childDetails.get(key)!.push({
+            sourceId: cachedDep.taskId,
+            targetId: childTask.id,
+            type: cachedDep.type
+          });
+          
           if (debugEnabled) {
             const sourceDisplay = sourceParent ? `${sourceParent}(${cachedDep.taskId})` : cachedDep.taskId;
             console.log(`🔍 [INCOMING] ${sourceDisplay} -${cachedDep.type}-> ${parentTask.id}(${childTask.id})`);
@@ -1441,6 +1385,17 @@ export class GanttChartComponent implements OnInit {
           dep.type = cachedDep.type;
           outgoingDependencies.push(dep);
           
+          // Child-Details für diese aggregierte Dependency sammeln
+          const key = `${parentTask.id}->${effectiveTargetId}-${cachedDep.type}`;
+          if (!childDetails.has(key)) {
+            childDetails.set(key, []);
+          }
+          childDetails.get(key)!.push({
+            sourceId: childTask.id,
+            targetId: cachedDep.taskId,
+            type: cachedDep.type
+          });
+          
           if (debugEnabled) {
             const targetDisplay = targetParent ? `${targetParent}(${cachedDep.taskId})` : cachedDep.taskId;
             console.log(`🔍 [OUTGOING] ${parentTask.id}(${childTask.id}) -${cachedDep.type}-> ${targetDisplay}`);
@@ -1452,7 +1407,7 @@ export class GanttChartComponent implements OnInit {
       
       // 3. RECURSIVE: Für Sub-Children
       if (childTask.children && childTask.children.length > 0) {
-        this.collectChildDependenciesRecursive(childTask, visited, incomingDependencies, outgoingDependencies, debugEnabled);
+        this.collectChildDependenciesRecursive(childTask, visited, incomingDependencies, outgoingDependencies, childDetails, debugEnabled);
       }
     }
   }
