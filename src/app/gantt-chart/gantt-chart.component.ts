@@ -77,6 +77,15 @@ export class GanttChartComponent implements OnInit {
     this.updateGanttItems();
   }
 
+  /**
+   * Forces a chart refresh by triggering Angular's change detection for the items array.
+   * This is used when we need to update the UI after modifying Gantt items or their properties.
+   * Centralized to allow for future optimization strategies (e.g., more targeted updates).
+   */
+  private forceChartRefresh(): void {
+    this.items = [...this.items];
+  }
+
   ngOnInit() {
     this.updateGanttItems();
   }
@@ -140,7 +149,7 @@ export class GanttChartComponent implements OnInit {
       }
       
       // Force UI update for this specific change
-      this.items = [...this.items];
+      this.forceChartRefresh();
       
       const endTime = performance.now();
       const duration = endTime - startTime;
@@ -412,7 +421,7 @@ export class GanttChartComponent implements OnInit {
       
       // 3. Force UI update wenn Dependencies aktualisiert wurden
       if (updatedParents > 0) {
-        this.items = [...this.items];
+        this.forceChartRefresh();
         console.log(`🔄 [DEPENDENCY REFRESH] Forced UI update`);
       }
       
@@ -611,7 +620,7 @@ export class GanttChartComponent implements OnInit {
 
       console.log(`Removed dependency: ${sourceId} -> ${targetTask.title}`);
       
-      this.items = [...this.items]; // Force UI update
+      this.forceChartRefresh(); // Force UI update
       this.dataChanged.emit('dependency-removed');
     }
   }
@@ -662,7 +671,7 @@ export class GanttChartComponent implements OnInit {
     
     // Force UI update if there were any changes
     if (changeSet.addedDependencies.length > 0 || changeSet.removedDependencies.length > 0) {
-      this.items = [...this.items];
+      this.forceChartRefresh();
     }
   }
 
