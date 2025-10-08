@@ -37,7 +37,6 @@
           (progressChange)="onProgressChange(item)"
           [(progress)]="item.origin.progress"
           [task]="item.origin"
-          [allTasks]="tasks"
           (validationError)="onValidationError($event)"
         ></app-task-status>
       </ng-template>

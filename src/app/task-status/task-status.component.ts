@@ -4,6 +4,7 @@ import { Task, Status } from '../domain/Task';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { UndoRedoService } from '../undo-redo.service';
 import { Chart } from '../domain/Chart';
+import { TaskStructureCache } from '../task-structure.cache';
 
 @Component({
   selector: 'app-task-status',
@@ -23,7 +24,6 @@ export class TaskStatusComponent {
   
   // Neue Inputs für Validation
   @Input() task!: Task; // Der aktuelle Task
-  @Input() allTasks: Task[] = []; // Alle Tasks für Parent/Child-Validation
   
   // Neuer Output für Validation-Errors
   @Output() validationError = new EventEmitter<string>();
@@ -31,7 +31,7 @@ export class TaskStatusComponent {
   // Referenz auf das aktuelle Chart, um Änderungen zu speichern
   @Input() chart?: Chart;
   
-  constructor(private undoRedoService: UndoRedoService) {}
+  constructor(private undoRedoService: UndoRedoService, private taskStructure: TaskStructureCache) {}
 
   onProgressChange() {
     this.progressChange.emit(this.progress);
@@ -152,14 +152,14 @@ export class TaskStatusComponent {
   }
 
   private getChildTasks(parentId: string): Task[] {
-    const parentTask = this.allTasks.find(t => t.id === parentId);
+    const parentTask = this.taskStructure.getAllTasks().find(t => t.id === parentId);
     if (!parentTask || !parentTask.children) {
       return [];
     }
     
     // Child-Task-IDs in tatsächliche Task-Objekte umwandeln
     return parentTask.children
-      .map(childId => this.allTasks.find(t => t.id === childId))
+      .map(childId => this.taskStructure.getAllTasks().find(t => t.id === childId))
       .filter((task): task is Task => task !== undefined);
   }
 }
