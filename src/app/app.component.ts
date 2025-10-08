@@ -13,15 +13,24 @@ import { ActivatedRoute } from '@angular/router';
 import { ToastService } from './toast.service';
 import { TaskFilterPipe } from './pipes/task-filter.pipe';
 import { DependencyCache } from './gantt-chart/dependency-cache';
+import { TaskStructureCache } from './task-structure.cache';
+import { TaskUpdateService } from './task-update.service';
+import { ChartProvider, CHART_PROVIDER } from './chart.provider';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   standalone: false,
-  providers: [GanttPrintService]
+  providers: [
+    GanttPrintService,
+    {
+      provide: CHART_PROVIDER,
+      useExisting: AppComponent
+    }
+  ]
 })
-export class AppComponent {
+export class AppComponent implements ChartProvider {
   @ViewChild(GanttChartComponent) ganttChartComponent!: GanttChartComponent;
 
   // Toast-Benachrichtigungen über Service
@@ -162,11 +171,16 @@ availableCharts: {
     private route: ActivatedRoute,
     private toastService: ToastService,
     private dependencyCache: DependencyCache,
-    private ganttPrintService: GanttPrintService
+    private ganttPrintService: GanttPrintService,
+    private taskStructure: TaskStructureCache,
+    private taskUpdateService: TaskUpdateService
   ) {
     this.initWithNewChart();
 
     this.availableCharts = this.chartStorage.getChartList();
+    
+    // Chart-Provider im TaskUpdateService registrieren
+    this.taskUpdateService.setChartProvider(this);
     
     // Status der Undo/Redo-Buttons abonnieren
     this.undoRedoService.canUndo$.subscribe(can => this.canUndo = can);
@@ -202,42 +216,22 @@ availableCharts: {
     this.chart.id = this.createId();
     this.chart.name = 'New Gantt chart';
     
-    // Initialize dependency cache for new chart
+    console.log('🚀 [APP COMPONENT] Initializing new chart with central services');
+    
+    // 1. TaskStructureCache: Build all lookup maps first
+    this.taskStructure.init(this.chart.tasks, this.chart.groups);
+    
+    // 2. DependencyCache: Initialize for new chart
     this.dependencyCache.rebuild(this.chart.tasks);
     
+    // 3. TaskUpdateService: Precompute all parent properties
+    this.taskUpdateService.precomputeAllParentProperties(this.chart.tasks);
+    
+    console.log('🚀 [APP COMPONENT] Chart initialization complete - all caches and computed properties ready');
+    
+    // 4. Update UI
     setTimeout(() => { this.ganttChartComponent.update(); }, 0);
     this.undoRedoService.initStateForChart(this.chart);
-  }
-
-  private deleteTaskById(id: string) {
-    console.log("delete task with id: " + id);
-    const task = this.getTaskById(id);
-    if (task) {
-      this.deleteTask(task);
-    }
-  }
-
-  private deleteTask(task: Task) {
-    console.log("delete a task");
-    const idx = this.chart.tasks.indexOf(task);
-    this.chart.tasks.splice(idx, 1);
-
-    // delete reference in other tasks (dependsOn)
-    this.chart.tasks.forEach(t => {
-      t.dependencies = t.dependencies.filter(d => d.taskId !== task.id);
-    });
-  }
-
-  private deleteGroup(group: Group) {
-    let toDelete = this.chart.tasks.filter(t => t.group == group.id);
-    toDelete.forEach(t => {
-      this.deleteTask(t);
-    });
-    this.chart.groups = this.chart.groups.filter(g => g.id != group.id);
-    
-    // Zustand für Undo speichern
-    this.saveStateForUndo();
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
   }
 
   private startTaskEditDialog(taskToEdit: Task) {
@@ -251,14 +245,9 @@ availableCharts: {
         console.log("Original task:", taskToEdit);
         console.log("Result task:", result);
         
-        // Erst den Task ersetzen
-        this.replaceTaskById(result);
-        console.log("After replaceTaskById, chart.tasks length:", this.chart.tasks.length);
-        
         this.recomputeTasks(result);
-        
-        // Dann für Undo speichern
-        this.saveStateForUndo();
+        // Task über Service aktualisieren (behält Objekt-Referenz bei)
+        this.taskUpdateService.addTask(result);
         
         // Explizites Update mit setTimeout um sicherzustellen, dass die Änderung verarbeitet wurde
         setTimeout(() => {
@@ -269,31 +258,9 @@ availableCharts: {
 
         if (!taskToEdit.title || taskToEdit.title == '') {
           console.log("will delete created task again because user clicked cancel");
-          this.deleteTask(taskToEdit);
-          // Explizites Update für gelöschten Task
-          setTimeout(() => {
-            setTimeout(() => { this.ganttChartComponent.update(); }, 0);
-          }, 0);
         }
       }
     );
-  }
-
-  private replaceTaskById(task: Task) {
-    const index = this.chart.tasks.findIndex(t => t.id === task.id);
-    if (index == -1) {
-      console.log("Couldn't find task with id " + task.id);
-    }
-    else {
-      // Array komplett neu erstellen, damit Angular die Änderung erkennt
-      this.chart.tasks = [
-        ...this.chart.tasks.slice(0, index),
-        task,
-        ...this.chart.tasks.slice(index + 1)
-      ];
-      // Cache invalidieren
-      this._lastFilteredHash = '';
-    }
   }
   
   private replaceGroupById(group: Group) {
@@ -324,20 +291,15 @@ availableCharts: {
     modalRef.result.then(
       (result) => {
         // Erst die Gruppe ersetzen
-        this.replaceGroupById(result);
-        this.recomputeTasks(result);
+        this.taskUpdateService.addGroup(result);
         
-        // Dann für Undo speichern
-        this.saveStateForUndo();
         setTimeout(() => { this.ganttChartComponent.update(); }, 0);
       },
       (reason) => {
 
         if (!toEdit.title || toEdit.title == '') {
           console.log("will delete created group again because user clicked cancel");
-          this.deleteGroup(toEdit);
         }
-        setTimeout(() => { this.ganttChartComponent.update(); }, 0);
       }
     );
   }
@@ -356,24 +318,8 @@ availableCharts: {
   }
 
   onAddTask(group? : string) {
-    let id = this.createId();
-    let newTask: Task = new Task();
-    newTask.group = group;
-    newTask.id = id;
-    newTask.title = '';
-    newTask.start = new Date();
-    newTask.end = new Date();
-    console.log(newTask.start);
-    newTask.computedStart = newTask.start ? newTask.start : new Date();
-    newTask.computedEnd = newTask.end ? newTask.end : new Date();
-    this.chart.tasks.push(newTask);
-    
-    // Erst den Task erstellen, dann für Undo speichern
-    this.saveStateForUndo();
-    // Explizites Update für neuen Task
-    setTimeout(() => {
-      setTimeout(() => { this.ganttChartComponent.update(); }, 0);
-    }, 0);
+    // Task über Service erstellen und zur Liste hinzufügen
+    const newTask = this.taskUpdateService.createTask(group);
     this.startTaskEditDialog(newTask);
   }
 
@@ -382,18 +328,8 @@ availableCharts: {
   }
 
   onAddGroup() {
-    let id = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-    let newGroup: Group = new Group();
-    newGroup.id = id;
-    newGroup.title = '';
-    this.chart.groups.push(newGroup);
-    
-    // Erst die Gruppe erstellen, dann für Undo speichern
-    this.saveStateForUndo();
-    // Explizites Update für neue Gruppe
-    setTimeout(() => {
-      this.ganttChartComponent.update();
-    }, 0);
+    // Gruppe über Service erstellen
+    const newGroup = this.taskUpdateService.createGroup();
     this.startGroupEditDialog(newGroup);
   }
 
@@ -408,10 +344,20 @@ availableCharts: {
       // Cache invalidieren
       this._lastFilteredHash = '';
       
-      // Initialize dependency cache for loaded chart
+      console.log('🚀 [APP COMPONENT] Loading existing chart with central services');
+      
+      // 1. TaskStructureCache: Build all lookup maps first
+      this.taskStructure.init(this.chart.tasks, this.chart.groups);
+      
+      // 2. DependencyCache: Initialize for loaded chart
       this.dependencyCache.rebuild(this.chart.tasks);
       
-      // Explizites Update nach Chart-Loading
+      // 3. TaskUpdateService: Precompute all parent properties
+      this.taskUpdateService.precomputeAllParentProperties(this.chart.tasks);
+      
+      console.log('🚀 [APP COMPONENT] Chart loading complete - all caches and computed properties ready');
+      
+      // 4. Update UI
       setTimeout(() => {
         setTimeout(() => { this.ganttChartComponent.update(); }, 0);
       }, 0);
@@ -462,9 +408,6 @@ availableCharts: {
         }
       });
     }
-    
-    this.saveStateForUndo();
-
   }
 
   onGanttExpandedChanged(newExpanded: Set<string>) {
@@ -495,10 +438,9 @@ availableCharts: {
     
     const previousChart = this.undoRedoService.undo(this.chart);
     if (previousChart) {
-      this.chart = previousChart;
-      // Synchronize dependency cache with restored chart
-      this.dependencyCache.rebuild(this.chart.tasks);
-      setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+      // Chart über ChartProvider setzen (triggert Cache-Updates)
+      this.setChart(previousChart);
+      this.triggerUpdate();
     }
   }
 
@@ -508,10 +450,9 @@ availableCharts: {
 
     const nextChart = this.undoRedoService.redo(this.chart);
     if (nextChart) {
-      this.chart = nextChart;
-      // Synchronize dependency cache with restored chart
-      this.dependencyCache.rebuild(this.chart.tasks);
-      setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+      // Chart über ChartProvider setzen (triggert Cache-Updates)
+      this.setChart(nextChart);
+      this.triggerUpdate();
     }
   }
 
@@ -798,6 +739,34 @@ availableCharts: {
 
   removeToast(toast: any) {
     this.toastService.remove(toast);
+  }
+
+  // ChartProvider Interface Implementation
+  getChart(): Chart {
+    return this.chart;
+  }
+
+  setChart(chart: Chart): void {
+    this.chart = chart;
+    // Cache invalidieren
+    this._lastFilteredHash = '';
+    
+    console.log('🚀 [CHART PROVIDER] Setting new chart with central services');
+    
+    // 1. TaskStructureCache: Build all lookup maps first
+    this.taskStructure.init(this.chart.tasks, this.chart.groups);
+    
+    // 2. DependencyCache: Initialize for chart
+    this.dependencyCache.rebuild(this.chart.tasks);
+    
+    // 3. TaskUpdateService: Precompute all parent properties
+    this.taskUpdateService.precomputeAllParentProperties(this.chart.tasks);
+    
+    console.log('🚀 [CHART PROVIDER] Chart set complete - all caches and computed properties ready');
+  }
+
+  triggerUpdate(): void {
+    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
   }
 
 }
