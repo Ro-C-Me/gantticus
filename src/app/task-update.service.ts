@@ -153,7 +153,6 @@ export class TaskUpdateService {
    */
   updateTaskProperties(request: TaskUpdateRequest): TaskUpdateChangeSet {
     console.log(`🔄 [TASK UPDATE SERVICE] Processing update for task: ${request.taskId}`, request.changes);
-    const startTime = performance.now();
 
     // Target-Task finden und aktualisieren
     const targetTask = this.taskStructure.getTaskById(request.taskId);
@@ -181,9 +180,7 @@ export class TaskUpdateService {
     updatedTasks.push(...parentUpdates);
     parentUpdates.forEach(change => ganttItemsToUpdate.add(change.taskId));
 
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    console.log(`🔄 [TASK UPDATE SERVICE] Completed update - ${duration.toFixed(2)}ms`, {
+    console.log(`🔄 [TASK UPDATE SERVICE] Completed update`, {
       targetTask: request.taskId,
       updatedTasks: updatedTasks.length,
       ganttItemsToUpdate: ganttItemsToUpdate.size
@@ -291,7 +288,6 @@ export class TaskUpdateService {
    */
   updateTask(updatedTask: Task): TaskUpdateChangeSet {
     console.log(`🔄 [TASK UPDATE SERVICE] Updating complete task: ${updatedTask.id}`);
-    const startTime = performance.now();
 
     // Bestehenden Task im Cache finden
     const existingTask = this.taskStructure.getTaskById(updatedTask.id);
@@ -363,9 +359,7 @@ export class TaskUpdateService {
     updatedTasks.push(...parentUpdates);
     parentUpdates.forEach(change => ganttItemsToUpdate.add(change.taskId));
 
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    console.log(`🔄 [TASK UPDATE SERVICE] Task update completed - ${duration.toFixed(2)}ms`, {
+    console.log(`🔄 [TASK UPDATE SERVICE] Task update completed`, {
       updatedTask: updatedTask.id,
       totalUpdatedTasks: updatedTasks.length,
       ganttItemsToUpdate: ganttItemsToUpdate.size
@@ -434,7 +428,6 @@ export class TaskUpdateService {
    */
   deleteTask(taskId: string): boolean {
     console.log(`🗑️ [TASK UPDATE SERVICE] Deleting task: ${taskId}`);
-    const startTime = performance.now();
 
     // Task finden
     const taskToDelete = this.taskStructure.getTaskById(taskId);
@@ -464,9 +457,7 @@ export class TaskUpdateService {
     // 5. DependencyService über Task-Löschung informieren
     this.dependencyCache.removeTask(taskId);
 
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    console.log(`🗑️ [TASK UPDATE SERVICE] Task deleted successfully - ${duration.toFixed(2)}ms`, {
+    console.log(`🗑️ [TASK UPDATE SERVICE] Task deleted successfully`, {
       deletedTask: taskId
     });
 
@@ -514,7 +505,6 @@ export class TaskUpdateService {
    */
   deleteGroup(groupId: string): number {
     console.log(`🗑️ [TASK UPDATE SERVICE] Deleting group: ${groupId}`);
-    const startTime = performance.now();
 
     // Gruppe finden
     const groupToDelete = this.taskStructure.getGroupById(groupId);
@@ -544,9 +534,7 @@ export class TaskUpdateService {
     // 3. Cache neu aufbauen (nach allen Task-Löschungen)
     this.taskStructure.init(chart.tasks, chart.groups);
 
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    console.log(`🗑️ [TASK UPDATE SERVICE] Group deleted successfully - ${duration.toFixed(2)}ms`, {
+    console.log(`🗑️ [TASK UPDATE SERVICE] Group deleted successfully`, {
       deletedGroup: groupId,
       deletedTasks: deletedTaskCount
     });
@@ -892,7 +880,6 @@ export class TaskUpdateService {
    */
   precomputeAllParentProperties(tasks: Task[]): void {
     console.log(`🔄 [TASK UPDATE SERVICE] Starting precomputation for ${tasks.length} tasks`);
-    const startTime = performance.now();
     
     // Cache für bereits berechnete Tasks (verhindert Duplikate)
     const computed = new Set<string>();
@@ -908,9 +895,7 @@ export class TaskUpdateService {
       }
     }
     
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    console.log(`🔄 [TASK UPDATE SERVICE] Precomputation completed - ${duration.toFixed(2)}ms`, {
+    console.log(`🔄 [TASK UPDATE SERVICE] Precomputation completed`, {
       totalTasks: tasks.length,
       updatedTasks: updatedTaskCount,
       computedTasks: computed.size
@@ -1020,7 +1005,6 @@ export class TaskUpdateService {
    */
   moveAsSubTask(taskToMove: Task, parentId: string, targetId: string, dropPosition: string): boolean {
     console.log(`🚚 [TASK UPDATE SERVICE] Moving task as sub-task: ${taskToMove.id} -> ${parentId}`);
-    const startTime = performance.now();
 
     const parentTask = this.taskStructure.getTaskById(parentId);
     if (!parentTask) {
@@ -1055,9 +1039,7 @@ export class TaskUpdateService {
     // Die Gruppenzugehörigkeit wird durch den Parent-Task bestimmt
     taskToMove.group = undefined;
 
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    console.log(`🚚 [TASK UPDATE SERVICE] Sub-Task created successfully - ${duration.toFixed(2)}ms`, {
+    console.log(`🚚 [TASK UPDATE SERVICE] Sub-Task created successfully`, {
       movedTask: taskToMove.id,
       newParent: parentId,
       groupRemoved: true
@@ -1076,7 +1058,6 @@ export class TaskUpdateService {
    */
   handleNormalDragDrop(taskToMove: Task, operation: DragDropOperation): boolean {
     console.log(`🚚 [TASK UPDATE SERVICE] Normal drag drop: ${taskToMove.id} -> ${operation.targetId} (${operation.dropPosition})`);
-    const startTime = performance.now();
 
     // Task wurde aus Parent herausgezogen - zu Top-Level machen
     this.removeTaskFromParentInternal(taskToMove.id);
@@ -1105,9 +1086,7 @@ export class TaskUpdateService {
     allTasks.splice(allTasks.indexOf(taskToMove), 1);
     allTasks.splice(targetIndex, 0, taskToMove);
 
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    console.log(`🚚 [TASK UPDATE SERVICE] Task moved to top-level successfully - ${duration.toFixed(2)}ms`, {
+    console.log(`🚚 [TASK UPDATE SERVICE] Task moved to top-level successfully`, {
       movedTask: taskToMove.id,
       newGroup: taskToMove.group,
       newPosition: targetIndex

@@ -25,24 +25,7 @@ export class TaskFilterPipe implements PipeTransform {
       return tasks || [];
     }
 
-    const startTime = performance.now();
-    const result = this.getFilteredTasks(tasks, filter);
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    
-    // Performance-Logging (nur bei signifikanten Filteroperationen)
-    if (duration > 1 || (filter.showDownstreamDeps || filter.showUpstreamDeps)) {
-      console.log(`⏱️ [TASK FILTER PIPE] Filter took ${duration.toFixed(2)}ms`, {
-        tasksCount: tasks.length,
-        filteredCount: result.length,
-        textFilter: filter.taskFilter || '(none)',
-        downstreamDeps: filter.showDownstreamDeps,
-        upstreamDeps: filter.showUpstreamDeps,
-        duration: `${duration.toFixed(2)}ms`
-      });
-    }
-
-    return result;
+    return this.getFilteredTasks(tasks, filter);
   }
 
   private getFilteredTasks(tasks: Task[], filter: TaskFilter): Task[] {

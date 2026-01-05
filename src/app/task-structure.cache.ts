@@ -89,7 +89,6 @@ export class TaskStructureCache {
   public init(tasks: Task[], groups: Group[]): void {
     this.tasks = tasks;
     this.groups = groups;
-    const startTime = performance.now();
     
     console.log('🏗️ [TASK STRUCTURE CACHE] Building lookup maps...', {
       tasksCount: tasks.length,
@@ -105,11 +104,7 @@ export class TaskStructureCache {
     // Group Maps aufbauen
     this.buildGroupMaps(groups, tasks);
     
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    const color = duration > 20 ? '🔴' : duration > 10 ? '🟠' : '🟢';
-    
-    console.log(`${color} [TASK STRUCTURE CACHE] Maps built successfully - ${duration.toFixed(2)}ms`, {
+    console.log('[TASK STRUCTURE CACHE] Maps built successfully', {
       taskMapSize: this.taskById.size,
       parentChildRelations: this.childrenByParentId.size,
       groupMapSize: this.groupById.size,
