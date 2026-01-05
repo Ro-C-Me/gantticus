@@ -35,7 +35,6 @@ export class DependencyCache {
    */
   rebuild(tasks: Task[]): void {
     console.log(`🔄 [DEPENDENCY CACHE] Rebuilding cache for ${tasks.length} tasks`);
-    const startTime = performance.now();
     
     // Clear all existing mappings
     this.clear();
@@ -55,10 +54,7 @@ export class DependencyCache {
       }
     }
     
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    
-    console.log(`✅ [DEPENDENCY CACHE] Rebuild complete - ${duration.toFixed(2)}ms`, {
+    console.log(`✅ [DEPENDENCY CACHE] Rebuild complete`, {
       totalTasks: tasks.length,
       tasksWithDependencies,
       totalDependencies,

@@ -700,8 +700,7 @@ export class GanttChartComponent implements OnInit {
   }
 
    updateGanttItems() {
-    const startTime = performance.now();
-    console.log("🟡 [GANTTICUS PERF] START updateGanttItems", {
+    console.log("🟡 [GANTTICUS] START updateGanttItems", {
       tasksCount: this.taskStructure.getAllTasks().length,
       groupsCount: this.taskStructure.getAllGroups().length,
       filteredTasksCount: this.filteredTasks.length
@@ -861,10 +860,7 @@ export class GanttChartComponent implements OnInit {
       }
     }
     
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    const color = duration > 100 ? '🔴' : duration > 50 ? '🟠' : '🟢';
-    console.log(`${color} [GANTTICUS PERF] END   updateGanttItems - ${duration.toFixed(2)}ms`, {
+    console.log('[GANTTICUS] END updateGanttItems', {
       finalItemsCount: this.items.length,
       finalGroupsCount: this.ganttGroups.length,
       processedTasksCount: this.filteredTasks.length
