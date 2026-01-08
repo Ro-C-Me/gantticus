@@ -44,6 +44,15 @@ export class AppComponent implements ChartProvider {
   // Pipe-Instanz für die Filterlogik
   private taskFilterPipe = new TaskFilterPipe();
 
+  // Helper-Methode für sicheres Update der Gantt-Chart-Komponente
+  private updateGanttChart() {
+    setTimeout(() => { 
+      if (this.ganttChartComponent) {
+        this.ganttChartComponent.update(); 
+      }
+    }, 0);
+  }
+
   isOverdue(task: Task) : boolean{
     if (!task.end) {
       return false;
@@ -64,7 +73,7 @@ export class AppComponent implements ChartProvider {
     
     // Status-Änderung ist bereits validiert und erlaubt
     this.saveStateForUndo();
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+    this.updateGanttChart();
     
     console.log(`Status changed for task ${task.id}: ${task.status}`);
   }
@@ -81,7 +90,7 @@ export class AppComponent implements ChartProvider {
     else {
       console.warn('Item\'s origin is not a Task instance:', item.origin);
     }
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+    this.updateGanttChart();
   }
 
   toolbarOptions: GanttToolbarOptions = {
@@ -229,8 +238,8 @@ availableCharts: {
     
     console.log('🚀 [APP COMPONENT] Chart initialization complete - all caches and computed properties ready');
     
-    // 4. Update UI
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+    // 4. Update UI (nur wenn ViewChild bereits initialisiert ist)
+    this.updateGanttChart();
     this.undoRedoService.initStateForChart(this.chart);
   }
 
@@ -251,7 +260,7 @@ availableCharts: {
         
         // Explizites Update mit setTimeout um sicherzustellen, dass die Änderung verarbeitet wurde
         setTimeout(() => {
-          setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+          this.updateGanttChart();
         }, 0);
       },
       (reason) => {
@@ -293,7 +302,7 @@ availableCharts: {
         // Erst die Gruppe ersetzen
         this.taskUpdateService.addGroup(result);
         
-        setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+        this.updateGanttChart();
       },
       (reason) => {
 
@@ -359,7 +368,7 @@ availableCharts: {
       
       // 4. Update UI
       setTimeout(() => {
-        setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+        this.updateGanttChart();
       }, 0);
       this.undoRedoService.initStateForChart(this.chart);
     }
@@ -392,7 +401,7 @@ availableCharts: {
 
   // Filter-Methoden
   onFilterChange() {
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+    this.updateGanttChart();
   }
 
   // Event-Handler für die neue Gantt-Chart-Komponente
@@ -424,7 +433,7 @@ availableCharts: {
     this.chart.filter.showInProgressTasks = true;
     this.chart.filter.showDoneTasks = true;
     this.chart.filter.showArchivedTasks = false;
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+    this.updateGanttChart();
   }
 
   // Speichert den aktuellen Zustand für Undo
@@ -766,7 +775,7 @@ availableCharts: {
   }
 
   triggerUpdate(): void {
-    setTimeout(() => { this.ganttChartComponent.update(); }, 0);
+    this.updateGanttChart();
   }
 
 }

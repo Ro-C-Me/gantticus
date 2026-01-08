@@ -1,0 +1,34 @@
+<div class="app-switcher" (clickOutside)="onClickOutside()">
+  <button 
+    class="btn btn-link app-switcher-button p-2" 
+    (click)="toggleSwitcher()"
+    [attr.aria-expanded]="isOpen"
+    aria-label="App-Auswahl öffnen"
+  >
+    <i class="bi bi-grid-3x3-gap-fill fs-4"></i>
+  </button>
+
+  <div class="app-switcher-panel" [class.show]="isOpen">
+    <div class="panel-header">
+      <h6 class="mb-0">Gantticus Apps</h6>
+    </div>
+    
+    <div class="apps-grid">
+      <button
+        *ngFor="let app of apps"
+        class="app-item"
+        [class.active]="currentApp?.id === app.id"
+        (click)="switchToApp(app)"
+      >
+        <div class="app-icon">
+          <i class="bi {{ app.icon }} fs-3"></i>
+        </div>
+        <div class="app-info">
+          <div class="app-name">{{ app.name }}</div>
+          <div class="app-description" *ngIf="app.description">{{ app.description }}</div>
+        </div>
+        <i class="bi bi-check-circle-fill check-icon" *ngIf="currentApp?.id === app.id"></i>
+      </button>
+    </div>
+  </div>
+</div>

@@ -16,6 +16,11 @@ import { registerLocaleData } from '@angular/common';
 import { TaskStatusComponent } from "./task-status/task-status.component";
 import { TaskFilterPipe } from './pipes/task-filter.pipe';
 import { GanttChartComponent } from './gantt-chart/gantt-chart.component';
+import { AppSwitcherComponent } from './core/app-switcher/app-switcher.component';
+import { AppNavbarComponent } from './core/app-navbar/app-navbar.component';
+import { ClickOutsideDirective } from './shared/directives/click-outside.directive';
+import { GanttFeatureComponent } from './features/gantt/gantt-feature.component';
+import { TimeTrackingComponent } from './features/time-tracking/time-tracking.component';
 
 registerLocaleData(localeDe, 'de');
 registerLocaleData(localeEn, 'en');
@@ -23,7 +28,12 @@ registerLocaleData(localeEn, 'en');
   declarations: [
     AppComponent,
     TaskFilterPipe,
-    GanttChartComponent
+    GanttChartComponent,
+    AppSwitcherComponent,
+    AppNavbarComponent,
+    ClickOutsideDirective,
+    GanttFeatureComponent,
+    TimeTrackingComponent
     ],
   imports: [
     RouterModule.forRoot(routes),
@@ -38,6 +48,7 @@ registerLocaleData(localeEn, 'en');
     TaskStatusComponent
 ],
   providers : [
+    AppComponent,
     { provide: LOCALE_ID, useValue: navigator.language ?? 'en' },
     {
       provide: GANTT_GLOBAL_CONFIG,
