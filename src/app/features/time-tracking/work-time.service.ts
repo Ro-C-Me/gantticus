@@ -150,6 +150,132 @@ export class WorkTimeService {
     return this.dataSubject.value.blocks;
   }
 
+  /**
+   * Erstellt einen neuen Arbeitszeitblock mit gegebener Start- und Endzeit
+   * @param start Startzeit als ISO-String
+   * @param end Endzeit als ISO-String oder null für laufenden Block
+   * @returns Die ID des neuen Blocks oder null bei Fehler
+   */
+  createBlock(start: string, end: string | null): string | null {
+    const startTime = new Date(start).getTime();
+    const endTime = end ? new Date(end).getTime() : null;
+    
+    // Validierung
+    if (endTime !== null && endTime <= startTime) {
+      return null; // Ende muss nach Start liegen
+    }
+    
+    // Overlap-Check (nur wenn Endzeit gesetzt ist)
+    if (end !== null && this.hasOverlap('', start, end)) {
+      return null; // Überschneidung mit bestehendem Block
+    }
+    
+    const newBlock: WorkTimeBlock = {
+      id: this.generateUUID(),
+      date: this.toDateString(new Date(start)),
+      start: start,
+      end: end
+    };
+
+    const data = this.dataSubject.value;
+    data.blocks.push(newBlock);
+    
+    this.saveToStorage(data);
+    this.dataSubject.next(data);
+    
+    return newBlock.id;
+  }
+
+  /**
+   * Aktualisiert die Startzeit eines Blocks
+   * @param blockId ID des zu aktualisierenden Blocks
+   * @param newStart Neue Startzeit als ISO-String
+   * @returns true wenn erfolgreich, false wenn Block nicht gefunden oder Validierung fehlschlägt
+   */
+  updateBlockStart(blockId: string, newStart: string): boolean {
+    const data = this.dataSubject.value;
+    const block = data.blocks.find(b => b.id === blockId);
+    
+    if (!block) {
+      return false;
+    }
+
+    // Validierung: Start muss vor Ende liegen
+    if (block.end) {
+      const startTime = new Date(newStart).getTime();
+      const endTime = new Date(block.end).getTime();
+      
+      if (startTime >= endTime) {
+        return false; // Ungültig: Start nach oder gleich Ende
+      }
+    }
+
+    block.start = newStart;
+    
+    this.saveToStorage(data);
+    this.dataSubject.next(data);
+    
+    return true;
+  }
+
+  /**
+   * Aktualisiert die Endzeit eines Blocks
+   * @param blockId ID des zu aktualisierenden Blocks
+   * @param newEnd Neue Endzeit als ISO-String
+   * @returns true wenn erfolgreich, false wenn Block nicht gefunden oder Validierung fehlschlägt
+   */
+  updateBlockEnd(blockId: string, newEnd: string): boolean {
+    const data = this.dataSubject.value;
+    const block = data.blocks.find(b => b.id === blockId);
+    
+    if (!block) {
+      return false;
+    }
+
+    // Laufende Blöcke können nicht über diese Methode beendet werden
+    if (block.end === null) {
+      return false;
+    }
+
+    // Validierung: Ende muss nach Start liegen
+    const startTime = new Date(block.start).getTime();
+    const endTime = new Date(newEnd).getTime();
+    
+    if (endTime <= startTime) {
+      return false; // Ungültig: Ende vor oder gleich Start
+    }
+
+    block.end = newEnd;
+    
+    this.saveToStorage(data);
+    this.dataSubject.next(data);
+    
+    return true;
+  }
+
+  /**
+   * Prüft, ob ein Block sich mit anderen Blöcken am selben Tag überschneidet
+   * @param blockId ID des zu prüfenden Blocks
+   * @param start Startzeit des Blocks
+   * @param end Endzeit des Blocks
+   * @returns true wenn Überschneidung existiert
+   */
+  hasOverlap(blockId: string, start: string, end: string): boolean {
+    const startTime = new Date(start).getTime();
+    const endTime = new Date(end).getTime();
+    const date = this.toDateString(new Date(start));
+    
+    const dayBlocks = this.getBlocksForDate(date).filter(b => b.id !== blockId);
+    
+    return dayBlocks.some(block => {
+      const blockStart = new Date(block.start).getTime();
+      const blockEnd = block.end ? new Date(block.end).getTime() : Date.now();
+      
+      // Überschneidung prüfen: A.start < B.end && A.end > B.start
+      return startTime < blockEnd && endTime > blockStart;
+    });
+  }
+
   // --- Private Helper-Methoden ---
 
   /**

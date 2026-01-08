@@ -67,9 +67,19 @@
     border-left: 1px solid #dee2e6;
     border-bottom: 1px solid #e9ecef;
     position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: rgba(13, 110, 253, 0.05);
+    }
     
     &.weekend-cell {
       background-color: #f8f9fa;
+      
+      &:hover {
+        background-color: rgba(13, 110, 253, 0.08);
+      }
     }
   }
 }
@@ -97,7 +107,7 @@
   left: 4px;
   right: 4px;
   border-radius: 4px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   pointer-events: auto;
   
@@ -112,12 +122,66 @@
     border: 2px dashed rgba(255, 255, 255, 0.5);
     animation: pulse 2s infinite;
   }
+  
+  // Resize Handles
+  .resize-handle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 10px;
+    cursor: ns-resize;
+    z-index: 10;
+    
+    // Visueller Hover-Indikator
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 3px;
+      background-color: rgba(255, 255, 255, 0.5);
+      border-radius: 2px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
+    &:hover::after {
+      opacity: 1;
+    }
+    
+    &.disabled {
+      cursor: not-allowed;
+      opacity: 0.3;
+      
+      &::after {
+        display: none;
+      }
+    }
+  }
+  
+  .resize-handle-top {
+    top: 0;
+    
+    &::after {
+      top: 2px;
+    }
+  }
+  
+  .resize-handle-bottom {
+    bottom: 0;
+    
+    &::after {
+      bottom: 2px;
+    }
+  }
 }
 
 .time-block-content {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  pointer-events: none; // Damit Resize-Handles darunter klickbar sind
 }
 
 .week-summary {

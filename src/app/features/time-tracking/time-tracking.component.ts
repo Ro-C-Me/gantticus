@@ -31,6 +31,15 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   daySums: Map<string, number> = new Map(); // Millisekunden pro Tag
   weekTotal: number = 0; // Millisekunden
   
+  // Resize State
+  private resizing: {
+    block: WorkTimeBlock;
+    edge: 'start' | 'end';
+    initialY: number;
+    initialTime: number; // Timestamp in ms
+    dayColumn: HTMLElement;
+  } | null = null;
+  
   private subscription?: Subscription;
   
   constructor(private workTimeService: WorkTimeService) {}
@@ -170,6 +179,193 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     const end = new Date(block.end);
     const endStr = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
     return `${startStr} - ${endStr}`;
+  }
+  
+  // --- Resize-Funktionalität ---
+  
+  canResizeStart(block: WorkTimeBlock): boolean {
+    return true;
+  }
+  
+  canResizeEnd(block: WorkTimeBlock): boolean {
+    return block.end !== null;
+  }
+  
+  // --- Block-Erstellung per Klick ---
+  
+  onCellClick(event: MouseEvent, day: Date, hour: number): void {
+    // Verhindere Event-Bubbling von Resize-Handles
+    const target = event.target as HTMLElement;
+    if (!target.classList.contains('time-cell')) {
+      return;
+    }
+    
+    // Berechne geklickte Zeit innerhalb der Zelle
+    const cell = target;
+    const rect = cell.getBoundingClientRect();
+    const relativeY = event.clientY - rect.top;
+    const cellHeight = rect.height; // 60px
+    
+    // Minuten innerhalb der Stunde (0-59)
+    const minutesInHour = (relativeY / cellHeight) * 60;
+    
+    // Erstelle Datum mit geklickter Zeit
+    const clickedTime = new Date(day);
+    clickedTime.setHours(hour, minutesInHour, 0, 0);
+    
+    // Snap to 5 minutes
+    let snappedTime = this.snapTo5Minutes(clickedTime.getTime());
+    
+    // Endzeit: +5 Minuten (Mindestdauer, editierbar)
+    const endTime = snappedTime + (5 * 60 * 1000);
+    
+    const startISO = new Date(snappedTime).toISOString();
+    const endISO = new Date(endTime).toISOString();
+    
+    // Prüfe ob an der Startzeit bereits ein Block existiert
+    const dayKey = this.getDayKey(day);
+    const existingBlocks = this.weekBlocks.get(dayKey) || [];
+    
+    const hasOverlap = existingBlocks.some(block => {
+      const blockStart = new Date(block.start).getTime();
+      const blockEnd = block.end ? new Date(block.end).getTime() : Date.now();
+      
+      // Prüfe Überlappung: neuer Block [snappedTime, endTime] mit existierendem Block
+      return snappedTime < blockEnd && endTime > blockStart;
+    });
+    
+    if (hasOverlap) {
+      console.log('Block creation cancelled: overlap detected');
+      return; // Ignorieren wenn bereits Block vorhanden
+    }
+    
+    // Erstelle Block als "completed" mit fester Endzeit
+    // Nutzer kann das Ende danach per Resize anpassen
+    const blockId = this.workTimeService.createBlock(startISO, endISO);
+    
+    if (blockId) {
+      console.log('New block created:', blockId);
+      // UI wird automatisch durch state$ aktualisiert
+    } else {
+      console.error('Failed to create block');
+    }
+  }
+  
+  onResizeStart(event: MouseEvent, block: WorkTimeBlock, edge: 'start' | 'end'): void {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (edge === 'start' && !this.canResizeStart(block)) return;
+    if (edge === 'end' && !this.canResizeEnd(block)) return;
+    
+    const target = event.target as HTMLElement;
+    const dayColumn = target.closest('.day-column') as HTMLElement;
+    
+    if (!dayColumn) return;
+    
+    const initialTime = edge === 'start' 
+      ? new Date(block.start).getTime()
+      : new Date(block.end!).getTime();
+    
+    this.resizing = {
+      block,
+      edge,
+      initialY: event.clientY,
+      initialTime,
+      dayColumn
+    };
+    
+    document.addEventListener('mousemove', this.onResizeMove);
+    document.addEventListener('mouseup', this.onResizeEnd);
+    
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+  }
+  
+  private onResizeMove = (event: MouseEvent): void => {
+    if (!this.resizing) return;
+    
+    const deltaY = event.clientY - this.resizing.initialY;
+    const rowHeight = 60;
+    const deltaHours = deltaY / rowHeight;
+    const deltaMs = deltaHours * 60 * 60 * 1000;
+    
+    let newTime = this.resizing.initialTime + deltaMs;
+    newTime = this.snapTo5Minutes(newTime);
+    
+    const blockDate = new Date(this.resizing.block.start);
+    const dayStart = new Date(blockDate.setHours(0, 0, 0, 0)).getTime();
+    const dayEnd = new Date(blockDate.setHours(23, 59, 59, 999)).getTime();
+    
+    newTime = Math.max(dayStart, Math.min(dayEnd, newTime));
+    
+    const minDuration = 5 * 60 * 1000;
+    
+    if (this.resizing.edge === 'start') {
+      const endTime = this.resizing.block.end 
+        ? new Date(this.resizing.block.end).getTime()
+        : Date.now();
+      
+      if (endTime - newTime < minDuration) {
+        newTime = endTime - minDuration;
+      }
+    } else {
+      const startTime = new Date(this.resizing.block.start).getTime();
+      
+      if (newTime - startTime < minDuration) {
+        newTime = startTime + minDuration;
+      }
+    }
+    
+    const newTimeISO = new Date(newTime).toISOString();
+    const startISO = this.resizing.edge === 'start' 
+      ? newTimeISO 
+      : this.resizing.block.start;
+    const endISO = this.resizing.edge === 'end' 
+      ? newTimeISO 
+      : this.resizing.block.end!;
+    
+    if (this.workTimeService.hasOverlap(this.resizing.block.id, startISO, endISO)) {
+      return;
+    }
+    
+    if (this.resizing.edge === 'start') {
+      this.resizing.block.start = newTimeISO;
+    } else {
+      this.resizing.block.end = newTimeISO;
+    }
+  }
+  
+  private onResizeEnd = (): void => {
+    if (!this.resizing) return;
+    
+    const { block, edge } = this.resizing;
+    
+    let success = false;
+    if (edge === 'start') {
+      success = this.workTimeService.updateBlockStart(block.id, block.start);
+    } else {
+      success = this.workTimeService.updateBlockEnd(block.id, block.end!);
+    }
+    
+    if (!success) {
+      this.loadWeekData();
+    }
+    
+    document.removeEventListener('mousemove', this.onResizeMove);
+    document.removeEventListener('mouseup', this.onResizeEnd);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    
+    this.resizing = null;
+  }
+  
+  private snapTo5Minutes(timestamp: number): number {
+    const date = new Date(timestamp);
+    const minutes = date.getMinutes();
+    const snappedMinutes = Math.round(minutes / 5) * 5;
+    date.setMinutes(snappedMinutes, 0, 0);
+    return date.getTime();
   }
   
   private scrollTo6AM(): void {

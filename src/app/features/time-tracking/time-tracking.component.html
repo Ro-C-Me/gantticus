@@ -43,7 +43,8 @@
         <!-- Day Columns -->
         <div *ngFor="let day of currentWeek.days"
              class="time-cell"
-             [class.weekend-cell]="isWeekendDay(day)">
+             [class.weekend-cell]="isWeekendDay(day)"
+             (click)="onCellClick($event, day, hour)">
         </div>
       </ng-container>
     </div>
@@ -57,11 +58,24 @@
         <div *ngFor="let block of getDayBlocks(day)"
              class="time-block"
              [class]="getBlockClass(block)"
-             [ngStyle]="getBlockStyle(block)">
+             [ngStyle]="getBlockStyle(block)"
+             (click)="$event.stopPropagation()">
+          
+          <!-- Resize Handle Top (Startzeit ändern) -->
+          <div class="resize-handle resize-handle-top"
+               (mousedown)="onResizeStart($event, block, 'start')"
+               [class.disabled]="!canResizeStart(block)"></div>
+          
+          <!-- Block Content -->
           <div class="time-block-content p-1 small">
             <div class="fw-bold">{{ formatBlockTime(block) }}</div>
             <div>{{ formatDuration(getBlockDuration(block)) }}</div>
           </div>
+          
+          <!-- Resize Handle Bottom (Endzeit ändern) -->
+          <div class="resize-handle resize-handle-bottom"
+               (mousedown)="onResizeStart($event, block, 'end')"
+               [class.disabled]="!canResizeEnd(block)"></div>
         </div>
       </div>
     </div>
