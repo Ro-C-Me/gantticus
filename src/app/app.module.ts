@@ -21,6 +21,7 @@ import { AppNavbarComponent } from './core/app-navbar/app-navbar.component';
 import { ClickOutsideDirective } from './shared/directives/click-outside.directive';
 import { GanttFeatureComponent } from './features/gantt/gantt-feature.component';
 import { TimeTrackingComponent } from './features/time-tracking/time-tracking.component';
+import { TimerWidgetComponent } from './core/timer-widget/timer-widget.component';
 
 registerLocaleData(localeDe, 'de');
 registerLocaleData(localeEn, 'en');
@@ -33,7 +34,8 @@ registerLocaleData(localeEn, 'en');
     AppNavbarComponent,
     ClickOutsideDirective,
     GanttFeatureComponent,
-    TimeTrackingComponent
+    TimeTrackingComponent,
+    TimerWidgetComponent
     ],
   imports: [
     RouterModule.forRoot(routes),
