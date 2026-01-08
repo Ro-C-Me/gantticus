@@ -1,0 +1,63 @@
+<div class="timer-widget d-flex align-items-center">
+  <!-- Timer-Anzeige -->
+  <div 
+    class="timer-display d-flex align-items-center gap-2"
+    ngbPopover
+    [popoverTitle]="isRunning ? 'Arbeitszeit läuft' : 'Pause'"
+    [ngbPopover]="popoverContent"
+    triggers="mouseenter:mouseleave"
+    placement="bottom"
+  >
+    <i class="bi bi-stopwatch"></i>
+    <span class="timer-value">{{ formatDuration(todayTotalMs) }}</span>
+  </div>
+
+  <!-- Start/Stop Button -->
+  <button 
+    *ngIf="!isRunning"
+    class="btn btn-sm btn-success ms-2"
+    (click)="onStartWork()"
+    title="Arbeit starten"
+  >
+    <i class="bi bi-play-fill"></i>
+  </button>
+
+  <button 
+    *ngIf="isRunning"
+    class="btn btn-sm btn-warning ms-2"
+    (click)="onStopWork()"
+    title="Arbeit beenden"
+  >
+    <i class="bi bi-pause-fill"></i>
+  </button>
+</div>
+
+<!-- Popover Template -->
+<ng-template #popoverContent>
+  <div class="timer-popover">
+    <div *ngIf="isRunning && currentBlock" class="mb-2">
+      <div class="text-success fw-bold">
+        <i class="bi bi-circle-fill text-success" style="font-size: 0.5rem;"></i>
+        Aktueller Block
+      </div>
+      <div class="small text-muted">
+        Gestartet: {{ formatTime(currentBlock.start) }}
+      </div>
+      <div class="small">
+        Laufzeit: {{ formatDuration(getCurrentBlockDuration()) }}
+      </div>
+    </div>
+
+    <div *ngIf="!isRunning && todayTotalMs > 0" class="mb-2">
+      <div class="text-muted">
+        <i class="bi bi-pause-circle text-muted"></i>
+        Pause
+      </div>
+    </div>
+
+    <div class="border-top pt-2 mt-2">
+      <div class="fw-bold">Gesamt heute:</div>
+      <div>{{ formatDuration(todayTotalMs) }}</div>
+    </div>
+  </div>
+</ng-template>

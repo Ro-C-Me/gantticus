@@ -1,0 +1,46 @@
+.timer-widget {
+  .timer-display {
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    i.bi-stopwatch {
+      font-size: 1.2rem;
+    }
+
+    .timer-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+      min-width: 4rem;
+      text-align: right;
+    }
+  }
+
+  button {
+    i {
+      font-size: 1rem;
+    }
+  }
+}
+
+.timer-popover {
+  min-width: 200px;
+
+  .bi-circle-fill {
+    animation: pulse 2s infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
