@@ -1,9 +1,9 @@
 <div class="timer-widget d-flex align-items-center">
   <!-- Timer-Anzeige -->
   <div 
-    class="timer-display d-flex align-items-center gap-2"
+    class="timer-display d-flex align-items-center gap-1"
     ngbPopover
-    [popoverTitle]="isRunning ? 'Arbeitszeit läuft' : 'Pause'"
+    [popoverTitle]="isRunning ? 'Arbeitszeit läuft' : 'Arbeitszeit'"
     [ngbPopover]="popoverContent"
     triggers="mouseenter:mouseleave"
     placement="bottom"
@@ -48,14 +48,7 @@
       </div>
     </div>
 
-    <div *ngIf="!isRunning && todayTotalMs > 0" class="mb-2">
-      <div class="text-muted">
-        <i class="bi bi-pause-circle text-muted"></i>
-        Pause
-      </div>
-    </div>
-
-    <div class="border-top pt-2 mt-2">
+    <div class="border-top pt-2" [class.mt-2]="isRunning">
       <div class="fw-bold">Gesamt heute:</div>
       <div>{{ formatDuration(todayTotalMs) }}</div>
     </div>
