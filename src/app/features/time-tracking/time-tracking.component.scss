@@ -6,6 +6,130 @@
 
 .time-tracking-container {
   height: 100%;
-  background-color: #f8f9fa;
-  overflow-y: auto; // Allow scrolling for content
+  background-color: #fff;
+}
+
+.week-navigation {
+  flex-shrink: 0;
+}
+
+.timeline-scroll-container {
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.timeline-grid {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  min-width: 800px;
+  
+  .time-header {
+    grid-column: 1;
+    grid-row: 1;
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 10;
+    border-bottom: 2px solid #dee2e6;
+  }
+  
+  .day-header {
+    grid-row: 1;
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 10;
+    border-bottom: 2px solid #dee2e6;
+    border-left: 1px solid #dee2e6;
+    
+    &.weekend-header {
+      background-color: #e9ecef;
+    }
+  }
+  
+  .time-label {
+    grid-column: 1;
+    height: 60px;
+    border-right: 2px solid #dee2e6;
+    border-bottom: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  
+  .time-cell {
+    height: 60px;
+    border-left: 1px solid #dee2e6;
+    border-bottom: 1px solid #e9ecef;
+    position: relative;
+    
+    &.weekend-cell {
+      background-color: #f8f9fa;
+    }
+  }
+}
+
+// Layer für Arbeitsblöcke (über dem Grid)
+.blocks-layer {
+  position: absolute;
+  top: 38px; // Höhe des Headers
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  min-width: 800px;
+  pointer-events: none;
+  
+  .day-column {
+    position: relative;
+    height: calc(60px * 24);
+    pointer-events: none;
+  }
+}
+
+.time-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+  
+  &.time-block-completed {
+    background-color: #0d6efd;
+    color: white;
+  }
+  
+  &.time-block-running {
+    background-color: #198754;
+    color: white;
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    animation: pulse 2s infinite;
+  }
+}
+
+.time-block-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.week-summary {
+  flex-shrink: 0;
+  border-top: 2px solid #dee2e6;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
 }

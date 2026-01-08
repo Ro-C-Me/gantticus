@@ -1,25 +1,87 @@
-<div class="time-tracking-container p-4">
-  <div class="row">
-    <div class="col-12">
-      <h2><i class="bi bi-stopwatch me-2"></i>{{ title }}</h2>
-      <p class="text-muted">Zeiterfassung für Projekte und Aufgaben</p>
+<div class="time-tracking-container h-100 d-flex flex-column">
+  <!-- Header mit Wochen-Navigation -->
+  <div class="week-navigation bg-light border-bottom p-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">{{ title }}</h4>
       
-      <div class="alert alert-info mt-4">
-        <i class="bi bi-info-circle me-2"></i>
-        <strong>Coming Soon!</strong> Die Time Tracking Funktionalität wird bald verfügbar sein.
+      <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-sm btn-outline-secondary" (click)="previousWeek()">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        
+        <div class="text-center">
+          <div class="fw-bold">KW {{ currentWeek.weekNumber }}, {{ currentWeek.year }}</div>
+          <div class="text-muted small">{{ getWeekRangeText() }}</div>
+        </div>
+        
+        <button class="btn btn-sm btn-outline-secondary" (click)="nextWeek()">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline Grid -->
+  <div class="timeline-scroll-container flex-grow-1 overflow-auto position-relative" #timelineScroll>
+    <!-- Grid für das Raster -->
+    <div class="timeline-grid">
+      <!-- Header Row: Tage -->
+      <div class="time-header"></div>
+      <div *ngFor="let day of currentWeek.days" 
+           class="day-header text-center fw-bold py-2"
+           [class.weekend-header]="isWeekendDay(day)">
+        {{ formatDayHeader(day) }}
       </div>
 
-      <div class="card mt-4">
-        <div class="card-body">
-          <h5 class="card-title">Geplante Features</h5>
-          <ul>
-            <li>Zeiterfassung mit Start/Stop Timer</li>
-            <li>Manuelle Zeitbuchungen</li>
-            <li>Verknüpfung mit Gantt-Tasks</li>
-            <li>Zeitauswertungen und Reports</li>
-            <li>Export-Funktionen</li>
-          </ul>
+      <!-- Time Rows -->
+      <ng-container *ngFor="let hour of hours">
+        <!-- Zeit-Label -->
+        <div class="time-label text-end pe-2 py-1 text-muted small">
+          {{ formatTime(hour) }}
         </div>
+
+        <!-- Day Columns -->
+        <div *ngFor="let day of currentWeek.days"
+             class="time-cell"
+             [class.weekend-cell]="isWeekendDay(day)">
+        </div>
+      </ng-container>
+    </div>
+    
+    <!-- Blöcke Layer (absolut über dem Grid) -->
+    <div class="blocks-layer">
+      <div *ngFor="let day of currentWeek.days; let dayIndex = index" 
+           class="day-column"
+           [style.grid-column]="dayIndex + 2">
+        
+        <div *ngFor="let block of getDayBlocks(day)"
+             class="time-block"
+             [class]="getBlockClass(block)"
+             [ngStyle]="getBlockStyle(block)">
+          <div class="time-block-content p-1 small">
+            <div class="fw-bold">{{ formatBlockTime(block) }}</div>
+            <div>{{ formatDuration(getBlockDuration(block)) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer: Summen -->
+  <div class="week-summary bg-light border-top p-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <!-- Tages-Summen -->
+      <div class="d-flex gap-3 small">
+        <div *ngFor="let day of currentWeek.days" class="text-center">
+          <div class="text-muted">{{ formatDayHeader(day).substring(0, 2) }}</div>
+          <div class="fw-bold">{{ formatDuration(getDaySum(day)) }}</div>
+        </div>
+      </div>
+      
+      <!-- Wochen-Summe -->
+      <div class="text-end">
+        <div class="text-muted small">Woche gesamt</div>
+        <div class="fw-bold fs-5">{{ formatDuration(weekTotal) }}</div>
       </div>
     </div>
   </div>

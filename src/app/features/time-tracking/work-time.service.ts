@@ -36,6 +36,9 @@ export class WorkTimeService {
   // Public Observable für Komponenten
   public data$: Observable<WorkTimeData> = this.dataSubject.asObservable();
   
+  // Alias für state$ (für Komponenten, die state$ erwarten)
+  public state$: Observable<WorkTimeData> = this.dataSubject.asObservable();
+  
   constructor() {
     // Lade initial die Daten aus dem LocalStorage
     this.dataSubject.next(this.loadFromStorage());
@@ -138,6 +141,13 @@ export class WorkTimeService {
   getTodayBlocks(): WorkTimeBlock[] {
     const today = this.toDateString(new Date());
     return this.getBlocksForDate(today);
+  }
+
+  /**
+   * Gibt alle Arbeitszeitblöcke zurück
+   */
+  getAllBlocks(): WorkTimeBlock[] {
+    return this.dataSubject.value.blocks;
   }
 
   // --- Private Helper-Methoden ---
