@@ -13,6 +13,14 @@
   flex-shrink: 0;
 }
 
+.split-mode-banner {
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
+
 .timeline-scroll-container {
   position: relative;
   overflow-y: auto;
@@ -123,20 +131,38 @@
     animation: pulse 2s infinite;
   }
   
-  // Delete Button (nur bei Hover sichtbar)
-  .delete-button {
+  // Split-Modus: Block wird hervorgehoben
+  &.split-mode-active {
+    outline: 3px solid #ffc107;
+    outline-offset: 2px;
+    cursor: crosshair;
+    z-index: 20;
+  }
+  
+  // Action Buttons Container (Split + Delete)
+  .block-actions {
     position: absolute;
     top: 4px;
     right: 4px;
+    display: flex;
+    gap: 4px;
+    z-index: 15;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  
+  &:hover .block-actions {
+    opacity: 1;
+  }
+  
+  // Split Button
+  .split-button {
     width: 24px;
     height: 24px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 15;
-    opacity: 0;
-    transition: opacity 0.2s;
     border-radius: 4px;
     
     i {
@@ -144,8 +170,46 @@
     }
   }
   
-  &:hover .delete-button {
-    opacity: 1;
+  // Delete Button
+  .delete-button {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    
+    i {
+      font-size: 0.75rem;
+    }
+  }
+  
+  // Split Preview Line
+  .split-preview-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #ffc107;
+    box-shadow: 0 0 4px rgba(255, 193, 7, 0.8);
+    z-index: 25;
+    pointer-events: none;
+    
+    // Zeitanzeige neben der Linie
+    .split-preview-time {
+      position: absolute;
+      right: -50px;
+      top: -10px;
+      background-color: #ffc107;
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
   }
   
   // Resize Handles

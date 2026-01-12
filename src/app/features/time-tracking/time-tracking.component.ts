@@ -40,6 +40,12 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     dayColumn: HTMLElement;
   } | null = null;
   
+  // Split State
+  splitModeActive: boolean = false;
+  splitModeBlock: WorkTimeBlock | null = null;
+  splitPreviewY: number | null = null;
+  splitPreviewTime: string | null = null; // Formatierte Uhrzeit "HH:mm"
+  
   private subscription?: Subscription;
   
   constructor(private workTimeService: WorkTimeService) {}
@@ -51,6 +57,9 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscription = this.workTimeService.state$.subscribe(() => {
       this.loadWeekData();
     });
+    
+    // ESC-Taste zum Abbrechen des Split-Modus
+    document.addEventListener('keydown', this.onKeyDown);
   }
   
   ngAfterViewInit(): void {
@@ -60,6 +69,7 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   
   ngOnDestroy(): void {
     this.subscription?.unsubscribe();
+    document.removeEventListener('keydown', this.onKeyDown);
   }
   
   loadWeekData(): void {
@@ -201,6 +211,105 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
       console.log('Block deleted:', block.id);
     } else {
       console.error('Failed to delete block:', block.id);
+    }
+  }
+  
+  // --- Split-Funktionalität ---
+  
+  canSplitBlock(block: WorkTimeBlock): boolean {
+    // Nur abgeschlossene Blöcke können gesplittet werden
+    return block.end !== null;
+  }
+  
+  onSplitBlockStart(event: MouseEvent, block: WorkTimeBlock): void {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (!this.canSplitBlock(block)) return;
+    
+    this.splitModeActive = true;
+    this.splitModeBlock = block;
+    this.splitPreviewY = null;
+    
+    console.log('Split mode activated for block:', block.id);
+  }
+  
+  onBlockClick(event: MouseEvent, block: WorkTimeBlock): void {
+    if (!this.splitModeActive || this.splitModeBlock?.id !== block.id) {
+      event.stopPropagation();
+      return;
+    }
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Berechne Split-Position
+    const blockElement = event.currentTarget as HTMLElement;
+    const rect = blockElement.getBoundingClientRect();
+    const relativeY = event.clientY - rect.top;
+    
+    // Berechne Zeit an Klick-Position
+    const blockStart = new Date(block.start).getTime();
+    const blockEnd = block.end ? new Date(block.end).getTime() : Date.now();
+    const blockDuration = blockEnd - blockStart;
+    const blockHeight = rect.height;
+    
+    const ratio = relativeY / blockHeight;
+    const splitTimeMs = blockStart + (blockDuration * ratio);
+    
+    // Snap to 5 minutes
+    const snappedTime = this.snapTo5Minutes(splitTimeMs);
+    const splitTimeISO = new Date(snappedTime).toISOString();
+    
+    // Split durchführen
+    const result = this.workTimeService.splitBlock(block.id, splitTimeISO);
+    
+    if (result) {
+      console.log('Block split successful:', result);
+      this.cancelSplitMode();
+    } else {
+      console.error('Failed to split block');
+    }
+  }
+  
+  onBlockMouseMove(event: MouseEvent, block: WorkTimeBlock): void {
+    if (!this.splitModeActive || this.splitModeBlock?.id !== block.id) {
+      return;
+    }
+    
+    const blockElement = event.currentTarget as HTMLElement;
+    const rect = blockElement.getBoundingClientRect();
+    const relativeY = event.clientY - rect.top;
+    this.splitPreviewY = relativeY;
+    
+    // Berechne Zeit an der Cursor-Position
+    const blockStart = new Date(block.start).getTime();
+    const blockEnd = block.end ? new Date(block.end).getTime() : Date.now();
+    const blockDuration = blockEnd - blockStart;
+    const blockHeight = rect.height;
+    
+    const ratio = relativeY / blockHeight;
+    const splitTimeMs = blockStart + (blockDuration * ratio);
+    
+    // Snap to 5 minutes
+    const snappedTime = this.snapTo5Minutes(splitTimeMs);
+    const splitTime = new Date(snappedTime);
+    
+    // Formatiere Uhrzeit "HH:mm"
+    this.splitPreviewTime = `${splitTime.getHours().toString().padStart(2, '0')}:${splitTime.getMinutes().toString().padStart(2, '0')}`;
+  }
+  
+  cancelSplitMode(): void {
+    this.splitModeActive = false;
+    this.splitModeBlock = null;
+    this.splitPreviewY = null;
+    this.splitPreviewTime = null;
+    console.log('Split mode cancelled');
+  }
+  
+  private onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && this.splitModeActive) {
+      this.cancelSplitMode();
     }
   }
   

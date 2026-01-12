@@ -275,6 +275,62 @@ export class WorkTimeService {
   }
 
   /**
+   * Teilt einen Block an einer bestimmten Zeit-Position in zwei Blöcke
+   * @param blockId ID des zu teilenden Blocks
+   * @param splitTime ISO-String der Split-Position
+   * @returns Array mit IDs der beiden neuen Blöcke, oder null bei Fehler
+   */
+  splitBlock(blockId: string, splitTime: string): [string, string] | null {
+    const data = this.dataSubject.value;
+    const block = data.blocks.find(b => b.id === blockId);
+    
+    if (!block) {
+      return null;
+    }
+
+    // Laufende Blöcke können nicht gesplittet werden
+    if (block.end === null) {
+      return null;
+    }
+
+    const startTime = new Date(block.start).getTime();
+    const endTime = new Date(block.end).getTime();
+    const split = new Date(splitTime).getTime();
+
+    // Validierung: Split muss innerhalb des Blocks liegen
+    if (split <= startTime || split >= endTime) {
+      return null;
+    }
+
+    // Erstelle zwei neue Blöcke
+    const block1: WorkTimeBlock = {
+      id: this.generateUUID(),
+      date: block.date,
+      start: block.start,
+      end: splitTime
+    };
+
+    const block2: WorkTimeBlock = {
+      id: this.generateUUID(),
+      date: block.date,
+      start: splitTime,
+      end: block.end
+    };
+
+    // Entferne Original-Block
+    const index = data.blocks.findIndex(b => b.id === blockId);
+    data.blocks.splice(index, 1);
+
+    // Füge neue Blöcke hinzu
+    data.blocks.push(block1, block2);
+
+    this.saveToStorage(data);
+    this.dataSubject.next(data);
+
+    return [block1.id, block2.id];
+  }
+
+  /**
    * Prüft, ob ein Block sich mit anderen Blöcken am selben Tag überschneidet
    * @param blockId ID des zu prüfenden Blocks
    * @param start Startzeit des Blocks

@@ -21,6 +21,18 @@
     </div>
   </div>
 
+  <!-- Split-Modus Banner -->
+  <div class="split-mode-banner alert alert-warning d-flex justify-content-between align-items-center mb-0"
+       *ngIf="splitModeActive">
+    <div>
+      <i class="bi bi-scissors me-2"></i>
+      <strong>Block teilen:</strong> Klicken Sie auf die Position, an der der Block geteilt werden soll
+    </div>
+    <button class="btn btn-sm btn-outline-dark" (click)="cancelSplitMode()">
+      <i class="bi bi-x"></i> Abbrechen
+    </button>
+  </div>
+
   <!-- Timeline Grid -->
   <div class="timeline-scroll-container flex-grow-1 overflow-auto position-relative" #timelineScroll>
     <!-- Grid für das Raster -->
@@ -58,15 +70,35 @@
         <div *ngFor="let block of getDayBlocks(day)"
              class="time-block"
              [class]="getBlockClass(block)"
+             [class.split-mode-active]="splitModeActive && splitModeBlock?.id === block.id"
              [ngStyle]="getBlockStyle(block)"
-             (click)="$event.stopPropagation()">
+             (click)="onBlockClick($event, block)"
+             (mousemove)="onBlockMouseMove($event, block)">
           
-          <!-- Delete Button (nur bei Hover sichtbar) -->
-          <button class="btn btn-sm btn-danger delete-button"
-                  (click)="onDeleteBlock($event, block)"
-                  title="Block löschen">
-            <i class="bi bi-x-lg"></i>
-          </button>
+          <!-- Action Buttons Container (nur bei Hover sichtbar) -->
+          <div class="block-actions">
+            <!-- Split Button -->
+            <button class="btn btn-sm btn-warning split-button"
+                    *ngIf="canSplitBlock(block)"
+                    (click)="onSplitBlockStart($event, block)"
+                    title="Block teilen">
+              <i class="bi bi-scissors"></i>
+            </button>
+            
+            <!-- Delete Button -->
+            <button class="btn btn-sm btn-danger delete-button"
+                    (click)="onDeleteBlock($event, block)"
+                    title="Block löschen">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          
+          <!-- Split Preview Line -->
+          <div class="split-preview-line" 
+               *ngIf="splitModeActive && splitModeBlock?.id === block.id && splitPreviewY !== null"
+               [style.top.px]="splitPreviewY">
+            <span class="split-preview-time">{{ splitPreviewTime }}</span>
+          </div>
           
           <!-- Resize Handle Top (Startzeit ändern) -->
           <div class="resize-handle resize-handle-top"
