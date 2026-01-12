@@ -324,6 +324,11 @@
   &.show {
     display: block;
   }
+  
+  .modal-body {
+    max-height: 60vh; // Maximal 60% der Viewport-Höhe
+    overflow-y: auto;
+  }
 }
 
 .modal-backdrop {
