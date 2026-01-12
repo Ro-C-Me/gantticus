@@ -220,6 +220,40 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     // Nur abgeschlossene Blöcke können gesplittet werden
     return block.end !== null;
   }
+
+  // --- Merge-Funktionalität ---
+
+  /**
+   * Prüft, ob direkt nach diesem Block ein weiterer Block folgt
+   * @param block Der zu prüfende Block
+   * @returns Den nachfolgenden Block, falls vorhanden, sonst null
+   */
+  getAdjacentNextBlock(block: WorkTimeBlock): WorkTimeBlock | null {
+    if (!block.end) {
+      return null; // Laufende Blöcke haben keinen Nachfolger
+    }
+
+    const dayBlocks = this.getDayBlocks(new Date(block.date));
+    
+    // Finde Block, dessen Start gleich dem Ende dieses Blocks ist
+    return dayBlocks.find(b => b.start === block.end) || null;
+  }
+
+  /**
+   * Führt zwei Blöcke zusammen
+   */
+  onMergeBlocks(event: MouseEvent, block1: WorkTimeBlock, block2: WorkTimeBlock): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const mergedId = this.workTimeService.mergeBlocks(block1.id, block2.id);
+    
+    if (mergedId) {
+      console.log('Blocks merged successfully:', mergedId);
+    } else {
+      console.error('Failed to merge blocks');
+    }
+  }
   
   onSplitBlockStart(event: MouseEvent, block: WorkTimeBlock): void {
     event.preventDefault();

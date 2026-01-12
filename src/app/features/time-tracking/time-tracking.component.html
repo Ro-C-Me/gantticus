@@ -115,6 +115,14 @@
           <div class="resize-handle resize-handle-bottom"
                (mousedown)="onResizeStart($event, block, 'end')"
                [class.disabled]="!canResizeEnd(block)"></div>
+          
+          <!-- Merge Button (nur wenn nächster Block direkt anschließt) -->
+          <button class="btn btn-sm btn-primary merge-button"
+                  *ngIf="getAdjacentNextBlock(block) as nextBlock"
+                  (click)="onMergeBlocks($event, block, nextBlock)"
+                  title="Mit nächstem Block zusammenfassen">
+            <i class="bi bi-arrows-collapse"></i>
+          </button>
         </div>
       </div>
     </div>

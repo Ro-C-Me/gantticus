@@ -212,6 +212,38 @@
     }
   }
   
+  // Merge Button (auf der Grenze zum nächsten Block)
+  .merge-button {
+    position: absolute;
+    bottom: -13px; // Zentriert auf der Grenzlinie (26px / 2)
+    left: 50%;
+    transform: translateX(-50%);
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; // Runder Button
+    z-index: 30; // Über allem anderen
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    
+    i {
+      font-size: 0.875rem;
+    }
+    
+    &:hover {
+      transform: translateX(-50%) scale(1.1);
+    }
+  }
+  
+  // Merge-Button bei Hover über Block oder Grenze sichtbar machen
+  &:hover .merge-button {
+    opacity: 1;
+  }
+  
   // Resize Handles
   .resize-handle {
     position: absolute;

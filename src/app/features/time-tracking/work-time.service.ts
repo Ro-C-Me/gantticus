@@ -331,6 +331,81 @@ export class WorkTimeService {
   }
 
   /**
+   * Führt zwei direkt aufeinanderfolgende Blöcke zu einem Block zusammen
+   * @param blockId1 ID des ersten Blocks
+   * @param blockId2 ID des zweiten Blocks
+   * @returns ID des neu erstellten Blocks, oder null wenn nicht möglich
+   */
+  mergeBlocks(blockId1: string, blockId2: string): string | null {
+    const data = this.dataSubject.value;
+    const block1 = data.blocks.find(b => b.id === blockId1);
+    const block2 = data.blocks.find(b => b.id === blockId2);
+
+    if (!block1 || !block2) {
+      console.error('One or both blocks not found');
+      return null;
+    }
+
+    // Validierung: Beide Blöcke müssen am selben Tag sein
+    if (block1.date !== block2.date) {
+      console.error('Blocks must be on the same day');
+      return null;
+    }
+
+    // Bestimme welcher Block zuerst kommt
+    let firstBlock: WorkTimeBlock;
+    let secondBlock: WorkTimeBlock;
+
+    const time1 = new Date(block1.start).getTime();
+    const time2 = new Date(block2.start).getTime();
+
+    if (time1 < time2) {
+      firstBlock = block1;
+      secondBlock = block2;
+    } else {
+      firstBlock = block2;
+      secondBlock = block1;
+    }
+
+    // Validierung: Blöcke müssen direkt aneinander angrenzen
+    // Ende des ersten Blocks muss gleich Start des zweiten Blocks sein
+    if (firstBlock.end !== secondBlock.start) {
+      console.error('Blocks must be directly adjacent (end1 === start2)');
+      return null;
+    }
+
+    // Erstelle neuen zusammengefassten Block
+    const mergedBlock: WorkTimeBlock = {
+      id: this.generateUUID(),
+      date: firstBlock.date,
+      start: firstBlock.start,
+      end: secondBlock.end // Kann null sein wenn zweiter Block läuft
+    };
+
+    // Entferne beide Original-Blöcke
+    const index1 = data.blocks.findIndex(b => b.id === blockId1);
+    const index2 = data.blocks.findIndex(b => b.id === blockId2);
+    
+    // Entferne von hinten nach vorne, damit Indizes stabil bleiben
+    if (index1 > index2) {
+      data.blocks.splice(index1, 1);
+      data.blocks.splice(index2, 1);
+    } else {
+      data.blocks.splice(index2, 1);
+      data.blocks.splice(index1, 1);
+    }
+
+    // Füge neuen Block hinzu
+    data.blocks.push(mergedBlock);
+
+    this.saveToStorage(data);
+    this.dataSubject.next(data);
+
+    console.log('Blocks merged:', blockId1, blockId2, '→', mergedBlock.id);
+    return mergedBlock.id;
+  }
+
+  /**
    * Prüft, ob ein Block sich mit anderen Blöcken am selben Tag überschneidet
    * @param blockId ID des zu prüfenden Blocks
    * @param start Startzeit des Blocks
