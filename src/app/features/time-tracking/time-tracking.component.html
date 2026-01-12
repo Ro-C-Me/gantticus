@@ -106,9 +106,17 @@
                [class.disabled]="!canResizeStart(block)"></div>
           
           <!-- Block Content -->
-          <div class="time-block-content p-1 small">
+          <div class="time-block-content p-1 small" 
+               style="cursor: pointer;"
+               (click)="openProjectModal($event, block)">
             <div class="fw-bold">{{ formatBlockTime(block) }}</div>
             <div>{{ formatDuration(getBlockDuration(block)) }}</div>
+            <div class="text-truncate" *ngIf="block.projectName">
+              <i class="bi bi-folder"></i> {{ block.projectName }}
+            </div>
+            <div class="text-muted fst-italic" style="font-size: 0.7rem;" *ngIf="!block.projectName">
+              <i class="bi bi-folder-plus"></i> Projekt
+            </div>
           </div>
           
           <!-- Resize Handle Bottom (Endzeit ändern) -->
@@ -212,3 +220,86 @@
 </div>
 <div class="modal-backdrop fade" [class.show]="showWeekSummaryModal" 
      *ngIf="showWeekSummaryModal" (click)="closeWeekSummaryModal()"></div>
+
+<!-- Project Assignment Modal -->
+<div class="modal fade" [class.show]="showProjectModal" [style.display]="showProjectModal ? 'block' : 'none'" 
+     tabindex="-1" role="dialog" (click)="closeProjectModal()">
+  <div class="modal-dialog modal-dialog-centered" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-folder me-2"></i>
+          Projekt zuordnen
+        </h5>
+        <button type="button" class="btn-close" (click)="closeProjectModal()"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Aktuelle Zuordnung anzeigen -->
+        <div class="mb-3" *ngIf="projectModalBlock">
+          <small class="text-muted">Zeitblock:</small>
+          <div class="fw-bold">{{ formatBlockTime(projectModalBlock) }}</div>
+        </div>
+
+        <!-- Liste bestehender Projekte -->
+        <div class="mb-3" *ngIf="availableProjects.length > 0 && !showNewProjectInput">
+          <label class="form-label">Bestehendes Projekt wählen:</label>
+          <div class="list-group">
+            <button type="button" 
+                    class="list-group-item list-group-item-action"
+                    *ngFor="let project of availableProjects"
+                    [class.active]="selectedProject === project"
+                    (click)="onProjectSelect(project)">
+              <i class="bi bi-folder me-2"></i>
+              {{ project }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Neues Projekt erstellen -->
+        <div class="mb-3" *ngIf="!showNewProjectInput">
+          <button type="button" class="btn btn-outline-primary w-100" (click)="onNewProjectClick()">
+            <i class="bi bi-plus-circle me-2"></i>
+            Neues Projekt erstellen
+          </button>
+        </div>
+
+        <!-- Input für neues Projekt -->
+        <div class="mb-3" *ngIf="showNewProjectInput">
+          <label class="form-label">Neuer Projektname:</label>
+          <input type="text" 
+                 class="form-control" 
+                 id="newProjectInput"
+                 [(ngModel)]="newProjectName"
+                 placeholder="z.B. Projekt Alpha"
+                 (keyup.enter)="assignProject()">
+          <button type="button" 
+                  class="btn btn-link btn-sm" 
+                  (click)="showNewProjectInput = false">
+            Abbrechen
+          </button>
+        </div>
+
+        <!-- Zuweisung entfernen -->
+        <div class="mb-3" *ngIf="projectModalBlock?.projectName">
+          <button type="button" class="btn btn-outline-danger w-100" (click)="removeProjectAssignment()">
+            <i class="bi bi-x-circle me-2"></i>
+            Projekt-Zuordnung entfernen
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeProjectModal()">
+          Abbrechen
+        </button>
+        <button type="button" 
+                class="btn btn-primary" 
+                (click)="assignProject()"
+                [disabled]="!selectedProject && !newProjectName.trim()">
+          Zuordnen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showProjectModal" 
+     *ngIf="showProjectModal" (click)="closeProjectModal()"></div>

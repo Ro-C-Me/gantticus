@@ -10,6 +10,7 @@ export interface WorkTimeBlock {
   date: string;            // ISO date: "2026-01-09"
   start: string;           // ISO datetime: "2026-01-09T08:15:00"
   end: string | null;      // null = läuft noch
+  projectName?: string;    // Optional: Zugeordnetes Projekt
 }
 
 /**
@@ -585,5 +586,53 @@ export class WorkTimeService {
     }
     
     return summaries;
+  }
+
+  /**
+   * Ordnet einem Block einen Projektnamen zu
+   * @param blockId ID des Blocks
+   * @param projectName Name des Projekts (oder null zum Entfernen)
+   * @returns true wenn erfolgreich
+   */
+  assignProjectToBlock(blockId: string, projectName: string | null): boolean {
+    const data = this.dataSubject.value;
+    const block = data.blocks.find(b => b.id === blockId);
+
+    if (!block) {
+      console.error('Block not found:', blockId);
+      return false;
+    }
+
+    // Setze oder entferne Projektnamen
+    if (projectName === null || projectName.trim() === '') {
+      delete block.projectName;
+    } else {
+      block.projectName = projectName.trim();
+    }
+
+    this.saveToStorage(data);
+    this.dataSubject.next(data);
+
+    console.log('Project assigned to block:', blockId, '→', projectName);
+    return true;
+  }
+
+  /**
+   * Gibt eine sortierte Liste aller bereits verwendeten Projektnamen zurück
+   * @returns Array von Projektnamen (unique, sortiert)
+   */
+  getUsedProjectNames(): string[] {
+    const data = this.dataSubject.value;
+    const projectNames = new Set<string>();
+
+    data.blocks.forEach(block => {
+      if (block.projectName && block.projectName.trim() !== '') {
+        projectNames.add(block.projectName.trim());
+      }
+    });
+
+    return Array.from(projectNames).sort((a, b) => 
+      a.localeCompare(b, 'de', { sensitivity: 'base' })
+    );
   }
 }

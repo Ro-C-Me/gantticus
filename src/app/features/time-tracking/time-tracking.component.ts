@@ -49,6 +49,14 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   // Week Summary Modal State
   showWeekSummaryModal: boolean = false;
   
+  // Project Assignment Modal State
+  showProjectModal: boolean = false;
+  projectModalBlock: WorkTimeBlock | null = null;
+  availableProjects: string[] = [];
+  selectedProject: string = '';
+  newProjectName: string = '';
+  showNewProjectInput: boolean = false;
+  
   private subscription?: Subscription;
   
   constructor(private workTimeService: WorkTimeService) {}
@@ -219,6 +227,83 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     const endStr = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
     
     return `${startStr} - ${endStr}`;
+  }
+
+  // --- Projekt-Zuordnung Modal ---
+
+  openProjectModal(event: MouseEvent, block: WorkTimeBlock): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.projectModalBlock = block;
+    this.availableProjects = this.workTimeService.getUsedProjectNames();
+    this.selectedProject = block.projectName || '';
+    this.newProjectName = '';
+    this.showNewProjectInput = false;
+    this.showProjectModal = true;
+  }
+
+  closeProjectModal(): void {
+    this.showProjectModal = false;
+    this.projectModalBlock = null;
+    this.selectedProject = '';
+    this.newProjectName = '';
+    this.showNewProjectInput = false;
+  }
+
+  onProjectSelect(projectName: string): void {
+    this.selectedProject = projectName;
+    this.showNewProjectInput = false;
+  }
+
+  onNewProjectClick(): void {
+    this.showNewProjectInput = true;
+    this.selectedProject = '';
+    // Focus auf Input setzen
+    setTimeout(() => {
+      const input = document.getElementById('newProjectInput') as HTMLInputElement;
+      input?.focus();
+    }, 100);
+  }
+
+  assignProject(): void {
+    if (!this.projectModalBlock) return;
+
+    let projectName: string | null = null;
+
+    if (this.showNewProjectInput) {
+      // Neues Projekt
+      projectName = this.newProjectName.trim();
+      if (projectName === '') {
+        return; // Leere Eingabe ignorieren
+      }
+    } else if (this.selectedProject) {
+      // Bestehendes Projekt
+      projectName = this.selectedProject;
+    }
+    // Wenn beides leer: projectName bleibt null → Zuweisung entfernen
+
+    const success = this.workTimeService.assignProjectToBlock(
+      this.projectModalBlock.id,
+      projectName
+    );
+
+    if (success) {
+      this.closeProjectModal();
+    }
+  }
+
+  removeProjectAssignment(): void {
+    if (!this.projectModalBlock) return;
+
+    const success = this.workTimeService.assignProjectToBlock(
+      this.projectModalBlock.id,
+      null
+    );
+
+    if (success) {
+      this.closeProjectModal();
+    }
   }
   
   // --- Resize-Funktionalität ---

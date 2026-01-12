@@ -302,7 +302,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  pointer-events: none; // Damit Resize-Handles darunter klickbar sind
+  pointer-events: auto; // Klickbar für Projekt-Zuordnung
+  position: relative;
+  z-index: 5; // Über Resize-Handles
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .week-summary {
