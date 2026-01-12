@@ -59,6 +59,7 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   selectedProject: string = '';
   newProjectName: string = '';
   showNewProjectInput: boolean = false;
+  selectedColor: string = '';
   
   private subscription?: Subscription;
   
@@ -193,9 +194,12 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     const top = startHour * rowHeight;
     const height = (endHour - startHour) * rowHeight;
     
+    const backgroundColor = this.workTimeService.getProjectColor(block.projectName);
+    
     return {
       top: `${top}px`,
-      height: `${Math.max(height, 20)}px` // Mindesthöhe 20px
+      height: `${Math.max(height, 20)}px`, // Mindesthöhe 20px
+      'background-color': backgroundColor
     };
   }
   
@@ -284,6 +288,7 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedProject = block.projectName || '';
     this.newProjectName = '';
     this.showNewProjectInput = false;
+    this.selectedColor = block.projectName ? this.workTimeService.getProjectColor(block.projectName) : '';
     this.showProjectModal = true;
   }
 
@@ -298,6 +303,7 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   onProjectSelect(projectName: string): void {
     this.selectedProject = projectName;
     this.showNewProjectInput = false;
+    this.selectedColor = this.workTimeService.getProjectColor(projectName);
   }
 
   onNewProjectClick(): void {
@@ -348,6 +354,19 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     if (success) {
       this.closeProjectModal();
     }
+  }
+
+  onColorSelect(color: string): void {
+    this.selectedColor = color;
+    
+    // Speichere Farbe sofort wenn Projekt bereits zugeordnet
+    if (this.selectedProject && !this.showNewProjectInput) {
+      this.workTimeService.setProjectColor(this.selectedProject, color);
+    }
+  }
+
+  getBlockColor(block: WorkTimeBlock): string {
+    return this.workTimeService.getProjectColor(block.projectName);
   }
   
   // --- Resize-Funktionalität ---
@@ -713,6 +732,10 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     const snappedMinutes = Math.round(minutes / 5) * 5;
     date.setMinutes(snappedMinutes, 0, 0);
     return date.getTime();
+  }
+  
+  getProjectColor(projectName: string | undefined): string {
+    return this.workTimeService.getProjectColor(projectName);
   }
   
   private scrollTo6AM(): void {

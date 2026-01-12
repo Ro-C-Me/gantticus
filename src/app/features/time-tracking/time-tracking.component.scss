@@ -128,6 +128,26 @@
   &.time-block-running {
     background-color: #198754;
     color: white;
+    
+    // Pulsierende Animation für laufende Blöcke
+    animation: pulse-running 2s ease-in-out infinite;
+    
+    // Leicht reduzierte Opacity für bessere Erkennbarkeit
+    opacity: 0.9;
+    
+    // Gestrichelter Border als zusätzlicher Indikator
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+  }
+
+  // Pulsieren Animation
+  @keyframes pulse-running {
+    0%, 100% {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(255, 255, 255, 0.7);
+    }
+    50% {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.3);
+    }
+  }
     border: 2px dashed rgba(255, 255, 255, 0.5);
     animation: pulse 2s infinite;
   }
@@ -338,5 +358,33 @@
   
   &.show {
     opacity: 1;
+  }
+}
+
+// Color Picker Button auf Projekt-Button
+.color-picker-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  transition: all 0.2s;
+  
+  &:hover {
+    transform: translateY(-50%) scale(1.1);
+    border-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  i {
+    color: #fff;
+    font-size: 14px;
   }
 }

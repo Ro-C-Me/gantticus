@@ -248,12 +248,29 @@
           <label class="form-label">Bestehendes Projekt wählen:</label>
           <div class="list-group">
             <button type="button" 
-                    class="list-group-item list-group-item-action"
+                    class="list-group-item list-group-item-action position-relative"
                     *ngFor="let project of availableProjects"
                     [class.active]="selectedProject === project"
+                    [style.background-color]="selectedProject === project ? getProjectColor(project) : ''"
+                    [style.color]="selectedProject === project ? '#fff' : ''"
                     (click)="onProjectSelect(project)">
               <i class="bi bi-folder me-2"></i>
               {{ project }}
+              
+              <!-- Color Picker Button auf dem ausgewählten Projekt -->
+              <button type="button" 
+                      class="btn btn-sm color-picker-btn" 
+                      *ngIf="selectedProject === project"
+                      [style.background-color]="selectedColor"
+                      [colorPicker]="selectedColor"
+                      (colorPickerChange)="onColorSelect($event)"
+                      (click)="$event.stopPropagation()"
+                      [cpPosition]="'left'"
+                      [cpOutputFormat]="'hex'"
+                      [cpAlphaChannel]="'disabled'"
+                      title="Farbe ändern">
+                <i class="bi bi-palette"></i>
+              </button>
             </button>
           </div>
         </div>

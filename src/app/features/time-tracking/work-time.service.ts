@@ -59,6 +59,22 @@ export interface ProjectWeekSummary {
 })
 export class WorkTimeService {
   private readonly STORAGE_KEY = 'work-time-blocks';
+  private readonly COLORS_STORAGE_KEY = 'project-colors';
+  
+  // Vordefinierte Farbpalette
+  private readonly COLOR_PALETTE = [
+    '#ef4444', // rot
+    '#f97316', // orange
+    '#f59e0b', // gelb
+    '#10b981', // grün
+    '#06b6d4', // cyan
+    '#3b82f6', // blau
+    '#8b5cf6', // violett
+    '#ec4899', // pink
+    '#64748b'  // grau
+  ];
+  
+  private readonly DEFAULT_UNASSIGNED_COLOR = '#6c757d'; // Bootstrap secondary
   
   private dataSubject = new BehaviorSubject<WorkTimeData>(this.loadFromStorage());
   
@@ -711,5 +727,97 @@ export class WorkTimeService {
     });
     
     return summaries;
+  }
+
+  // --- Projekt-Farben Verwaltung ---
+
+  /**
+   * Lädt die Projekt-Farben aus dem LocalStorage
+   */
+  private loadProjectColors(): Map<string, string> {
+    try {
+      const stored = localStorage.getItem(this.COLORS_STORAGE_KEY);
+      if (stored) {
+        const obj = JSON.parse(stored);
+        return new Map(Object.entries(obj));
+      }
+    } catch (error) {
+      console.error('Failed to load project colors from storage:', error);
+    }
+    return new Map();
+  }
+
+  /**
+   * Speichert die Projekt-Farben im LocalStorage
+   */
+  private saveProjectColors(colors: Map<string, string>): void {
+    try {
+      const obj = Object.fromEntries(colors);
+      localStorage.setItem(this.COLORS_STORAGE_KEY, JSON.stringify(obj));
+    } catch (error) {
+      console.error('Failed to save project colors to storage:', error);
+    }
+  }
+
+  /**
+   * Gibt die Farbe für ein Projekt zurück
+   * Weist automatisch eine Farbe zu, wenn noch keine vorhanden ist
+   */
+  getProjectColor(projectName: string | null | undefined): string {
+    if (!projectName || projectName.trim() === '' || projectName === 'Nicht zugeordnet') {
+      return this.DEFAULT_UNASSIGNED_COLOR;
+    }
+
+    const colors = this.loadProjectColors();
+    
+    if (!colors.has(projectName)) {
+      // Automatische Farbzuweisung
+      const newColor = this.getNextAvailableColor(colors);
+      colors.set(projectName, newColor);
+      this.saveProjectColors(colors);
+      return newColor;
+    }
+
+    return colors.get(projectName)!;
+  }
+
+  /**
+   * Setzt eine Farbe für ein Projekt
+   */
+  setProjectColor(projectName: string, color: string): void {
+    if (!projectName || projectName.trim() === '') {
+      return;
+    }
+
+    const colors = this.loadProjectColors();
+    colors.set(projectName, color);
+    this.saveProjectColors(colors);
+  }
+
+  /**
+   * Gibt eine zufällige verfügbare Farbe aus der Palette zurück
+   */
+  private getNextAvailableColor(colors: Map<string, string>): string {
+    const usedColors = new Set(colors.values());
+    
+    // Sammle alle ungenutzten Farben
+    const availableColors = this.COLOR_PALETTE.filter(color => !usedColors.has(color));
+    
+    if (availableColors.length > 0) {
+      // Wähle zufällige ungenutzte Farbe
+      const randomIndex = Math.floor(Math.random() * availableColors.length);
+      return availableColors[randomIndex];
+    }
+    
+    // Alle Farben vergeben -> Wähle zufällige Farbe aus gesamter Palette
+    const randomIndex = Math.floor(Math.random() * this.COLOR_PALETTE.length);
+    return this.COLOR_PALETTE[randomIndex];
+  }
+
+  /**
+   * Gibt die komplette Farbpalette zurück (für Farb-Picker)
+   */
+  getColorPalette(): string[] {
+    return [...this.COLOR_PALETTE];
   }
 }

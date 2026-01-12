@@ -4,6 +4,7 @@ import { AppComponent } from './app.component';
 import { GANTT_GLOBAL_CONFIG, GanttI18nLocale, GanttLinkLineType, GanttLinkType, NgxGanttModule } from '@worktile/gantt';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule,  ReactiveFormsModule  } from '@angular/forms';
+import { ColorPickerDirective } from 'ngx-color-picker';
 import { TaskEditModalComponent } from './task-edit-modal/task-edit-modal.component';
 import { TaskTitleComponent } from "./task-title/task-title.component";
 import { GroupTitleComponent } from './group-title/group-title.component';
@@ -44,6 +45,7 @@ registerLocaleData(localeEn, 'en');
     NgbModule,
     FormsModule,
     ReactiveFormsModule,
+    ColorPickerDirective,
     TaskTitleComponent,
     GroupTitleComponent,
     DependencyManagementComponent,
