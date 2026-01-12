@@ -61,6 +61,13 @@
              [ngStyle]="getBlockStyle(block)"
              (click)="$event.stopPropagation()">
           
+          <!-- Delete Button (nur bei Hover sichtbar) -->
+          <button class="btn btn-sm btn-danger delete-button"
+                  (click)="onDeleteBlock($event, block)"
+                  title="Block löschen">
+            <i class="bi bi-x-lg"></i>
+          </button>
+          
           <!-- Resize Handle Top (Startzeit ändern) -->
           <div class="resize-handle resize-handle-top"
                (mousedown)="onResizeStart($event, block, 'start')"

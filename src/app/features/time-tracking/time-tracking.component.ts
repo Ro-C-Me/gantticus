@@ -191,6 +191,19 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     return block.end !== null;
   }
   
+  onDeleteBlock(event: MouseEvent, block: WorkTimeBlock): void {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const success = this.workTimeService.deleteBlock(block.id);
+    
+    if (success) {
+      console.log('Block deleted:', block.id);
+    } else {
+      console.error('Failed to delete block:', block.id);
+    }
+  }
+  
   // --- Block-Erstellung per Klick ---
   
   onCellClick(event: MouseEvent, day: Date, hour: number): void {

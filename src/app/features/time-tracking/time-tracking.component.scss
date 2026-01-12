@@ -123,6 +123,31 @@
     animation: pulse 2s infinite;
   }
   
+  // Delete Button (nur bei Hover sichtbar)
+  .delete-button {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 15;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border-radius: 4px;
+    
+    i {
+      font-size: 0.75rem;
+    }
+  }
+  
+  &:hover .delete-button {
+    opacity: 1;
+  }
+  
   // Resize Handles
   .resize-handle {
     position: absolute;

@@ -254,6 +254,27 @@ export class WorkTimeService {
   }
 
   /**
+   * Löscht einen Arbeitszeitblock
+   * @param blockId ID des zu löschenden Blocks
+   * @returns true wenn erfolgreich, false wenn Block nicht gefunden
+   */
+  deleteBlock(blockId: string): boolean {
+    const data = this.dataSubject.value;
+    const index = data.blocks.findIndex(b => b.id === blockId);
+    
+    if (index === -1) {
+      return false;
+    }
+
+    data.blocks.splice(index, 1);
+    
+    this.saveToStorage(data);
+    this.dataSubject.next(data);
+    
+    return true;
+  }
+
+  /**
    * Prüft, ob ein Block sich mit anderen Blöcken am selben Tag überschneidet
    * @param blockId ID des zu prüfenden Blocks
    * @param start Startzeit des Blocks
