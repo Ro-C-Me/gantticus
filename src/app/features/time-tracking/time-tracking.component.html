@@ -151,9 +151,14 @@
       <div class="text-end">
         <div class="text-muted small">Woche gesamt</div>
         <div class="fw-bold fs-5">{{ formatDuration(weekTotal) }}</div>
-        <button class="btn btn-sm btn-outline-primary mt-2" (click)="openWeekSummaryModal()">
-          <i class="bi bi-calendar-week"></i> Wochenübersicht
-        </button>
+        <div class="d-flex gap-2 mt-2">
+          <button class="btn btn-sm btn-outline-primary" (click)="openWeekSummaryModal()">
+            <i class="bi bi-calendar-week"></i> Wochenübersicht
+          </button>
+          <button class="btn btn-sm btn-outline-success" (click)="openProjectOverviewModal()">
+            <i class="bi bi-folder"></i> Projektübersicht
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -303,3 +308,74 @@
 </div>
 <div class="modal-backdrop fade" [class.show]="showProjectModal" 
      *ngIf="showProjectModal" (click)="closeProjectModal()"></div>
+
+<!-- Project Overview Modal -->
+<div class="modal fade" [class.show]="showProjectOverviewModal" [style.display]="showProjectOverviewModal ? 'block' : 'none'" 
+     tabindex="-1" role="dialog" (click)="closeProjectOverviewModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-folder me-2"></i>
+          Projektübersicht KW {{ currentWeek.weekNumber }}, {{ currentWeek.year }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeProjectOverviewModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 20%">Projekt</th>
+                <th *ngFor="let day of currentWeek.days" class="text-center" style="width: 10%">
+                  {{ formatDayHeader(day).substring(0, 2) }}
+                </th>
+                <th class="text-center fw-bold" style="width: 10%">Gesamt</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let project of getProjectOverview()">
+                <td class="fw-bold">{{ project.projectName }}</td>
+                <td *ngFor="let day of currentWeek.days" class="text-center">
+                  <ng-container *ngIf="project.dailyMs.get(getDayKey(day)) as ms">
+                    {{ formatDecimalHours(ms) }}
+                  </ng-container>
+                  <span *ngIf="!project.dailyMs.get(getDayKey(day))" class="text-muted">-</span>
+                </td>
+                <td class="text-center fw-bold">
+                  {{ formatDecimalHours(project.totalMs) }}
+                </td>
+              </tr>
+              <tr *ngIf="getProjectOverview().length === 0">
+                <td [attr.colspan]="currentWeek.days.length + 2" class="text-center text-muted">
+                  Keine Arbeitszeiten in dieser Woche erfasst.
+                </td>
+              </tr>
+            </tbody>
+            <tfoot *ngIf="getProjectOverview().length > 0" class="table-secondary">
+              <tr class="fw-bold">
+                <td>Tagesgesamtzeit</td>
+                <td *ngFor="let day of currentWeek.days" class="text-center">
+                  <ng-container *ngIf="getDayTotal(day) > 0">
+                    {{ formatDecimalHours(getDayTotal(day)) }}
+                  </ng-container>
+                  <span *ngIf="getDayTotal(day) === 0" class="text-muted">-</span>
+                </td>
+                <td class="text-center">
+                  {{ formatDecimalHours(weekTotal) }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeProjectOverviewModal()">
+          Schließen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showProjectOverviewModal" 
+     *ngIf="showProjectOverviewModal" (click)="closeProjectOverviewModal()"></div>

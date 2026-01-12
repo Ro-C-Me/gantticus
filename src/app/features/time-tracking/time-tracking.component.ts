@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { WorkTimeService, WorkTimeBlock, DaySummary } from './work-time.service';
+import { WorkTimeService, WorkTimeBlock, DaySummary, ProjectWeekSummary } from './work-time.service';
 import { 
   WeekView, 
   getCurrentWeek, 
@@ -48,6 +48,9 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   
   // Week Summary Modal State
   showWeekSummaryModal: boolean = false;
+  
+  // Project Overview Modal State
+  showProjectOverviewModal: boolean = false;
   
   // Project Assignment Modal State
   showProjectModal: boolean = false;
@@ -160,6 +163,17 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
   }
+
+  /**
+   * Formatiert Millisekunden als Dezimalstunden mit 2 Nachkommastellen
+   * Verwendet Komma als Dezimaltrennzeichen (deutsches Format)
+   * @param ms Millisekunden
+   * @returns Formatierte Stunden, z.B. "3,25" für 3h 15m
+   */
+  formatDecimalHours(ms: number): string {
+    const hours = ms / (1000 * 60 * 60);
+    return hours.toFixed(2).replace('.', ',');
+  }
   
   getBlockDuration(block: WorkTimeBlock): number {
     const start = new Date(block.start).getTime();
@@ -227,6 +241,36 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     const endStr = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
     
     return `${startStr} - ${endStr}`;
+  }
+
+  // --- Projektübersicht Modal ---
+
+  openProjectOverviewModal(): void {
+    this.showProjectOverviewModal = true;
+  }
+
+  closeProjectOverviewModal(): void {
+    this.showProjectOverviewModal = false;
+  }
+
+  getProjectOverview() {
+    return this.workTimeService.getProjectWeekSummary(
+      this.currentWeek.startDate,
+      this.currentWeek.endDate
+    );
+  }
+
+  getDayTotal(date: Date): number {
+    const dateStr = this.getDayKey(date);
+    const projectSummaries = this.getProjectOverview();
+    
+    let total = 0;
+    projectSummaries.forEach(summary => {
+      const dayMs = summary.dailyMs.get(dateStr) || 0;
+      total += dayMs;
+    });
+    
+    return total;
   }
 
   // --- Projekt-Zuordnung Modal ---

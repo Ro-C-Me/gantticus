@@ -40,6 +40,15 @@ export interface DaySummary {
 }
 
 /**
+ * Repräsentiert die Arbeitszeit eines Projekts über eine Woche
+ */
+export interface ProjectWeekSummary {
+  projectName: string;                    // Name des Projekts (oder "Nicht zugeordnet")
+  dailyMs: Map<string, number>;          // Millisekunden pro Tag (key: ISO date)
+  totalMs: number;                       // Gesamtzeit über alle Tage
+}
+
+/**
  * Service zur Verwaltung der Arbeitszeiterfassung
  * - Startet und stoppt Arbeitszeitblöcke
  * - Persistiert Daten im LocalStorage
@@ -634,5 +643,73 @@ export class WorkTimeService {
     return Array.from(projectNames).sort((a, b) => 
       a.localeCompare(b, 'de', { sensitivity: 'base' })
     );
+  }
+
+  /**
+   * Erstellt eine Projektübersicht über eine Woche
+   * Gruppiert Arbeitszeiten nach Projekt und Tag
+   * @param startDate Startdatum der Woche
+   * @param endDate Enddatum der Woche
+   * @returns Array von ProjectWeekSummary, sortiert nach Projektname
+   */
+  getProjectWeekSummary(startDate: Date, endDate: Date): ProjectWeekSummary[] {
+    const data = this.dataSubject.value;
+    const projectMap = new Map<string, Map<string, number>>();
+    
+    // Durchlaufe alle Blöcke im Zeitraum
+    data.blocks.forEach(block => {
+      const blockDate = new Date(block.date);
+      
+      // Nur Blöcke innerhalb des Zeitraums
+      if (blockDate < startDate || blockDate > endDate) {
+        return;
+      }
+      
+      // Projekt bestimmen
+      const projectName = block.projectName?.trim() || 'Nicht zugeordnet';
+      
+      // Berechne Dauer
+      const startTime = new Date(block.start).getTime();
+      const endTime = block.end ? new Date(block.end).getTime() : Date.now();
+      const duration = endTime - startTime;
+      
+      // Initialisiere Projekt wenn nötig
+      if (!projectMap.has(projectName)) {
+        projectMap.set(projectName, new Map<string, number>());
+      }
+      
+      const projectDailyMap = projectMap.get(projectName)!;
+      const dateStr = block.date;
+      
+      // Addiere Dauer zum Tag
+      const currentDuration = projectDailyMap.get(dateStr) || 0;
+      projectDailyMap.set(dateStr, currentDuration + duration);
+    });
+    
+    // Konvertiere Map zu Array
+    const summaries: ProjectWeekSummary[] = [];
+    
+    projectMap.forEach((dailyMs, projectName) => {
+      let totalMs = 0;
+      
+      dailyMs.forEach(ms => {
+        totalMs += ms;
+      });
+      
+      summaries.push({
+        projectName,
+        dailyMs,
+        totalMs
+      });
+    });
+    
+    // Sortiere: "Nicht zugeordnet" zuletzt, sonst alphabetisch
+    summaries.sort((a, b) => {
+      if (a.projectName === 'Nicht zugeordnet') return 1;
+      if (b.projectName === 'Nicht zugeordnet') return -1;
+      return a.projectName.localeCompare(b.projectName, 'de', { sensitivity: 'base' });
+    });
+    
+    return summaries;
   }
 }
