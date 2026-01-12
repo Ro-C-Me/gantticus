@@ -501,8 +501,30 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
   
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape' && this.splitModeActive) {
-      this.cancelSplitMode();
+    if (event.key === 'Escape') {
+      // Split-Modus beenden
+      if (this.splitModeActive) {
+        this.cancelSplitMode();
+        return;
+      }
+      
+      // Projekt-Zuordnung Modal schließen
+      if (this.showProjectModal) {
+        this.closeProjectModal();
+        return;
+      }
+      
+      // Wochenübersicht Modal schließen
+      if (this.showWeekSummaryModal) {
+        this.closeWeekSummaryModal();
+        return;
+      }
+      
+      // Projektübersicht Modal schließen
+      if (this.showProjectOverviewModal) {
+        this.closeProjectOverviewModal();
+        return;
+      }
     }
   }
   
