@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { WorkTimeService, WorkTimeBlock } from './work-time.service';
+import { WorkTimeService, WorkTimeBlock, DaySummary } from './work-time.service';
 import { 
   WeekView, 
   getCurrentWeek, 
@@ -45,6 +45,9 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   splitModeBlock: WorkTimeBlock | null = null;
   splitPreviewY: number | null = null;
   splitPreviewTime: string | null = null; // Formatierte Uhrzeit "HH:mm"
+  
+  // Week Summary Modal State
+  showWeekSummaryModal: boolean = false;
   
   private subscription?: Subscription;
   
@@ -188,6 +191,33 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     
     const end = new Date(block.end);
     const endStr = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
+    return `${startStr} - ${endStr}`;
+  }
+
+  // --- Wochenübersicht Modal ---
+
+  openWeekSummaryModal(): void {
+    this.showWeekSummaryModal = true;
+  }
+
+  closeWeekSummaryModal(): void {
+    this.showWeekSummaryModal = false;
+  }
+
+  getWeekSummary() {
+    return this.workTimeService.getWeekSummary(
+      this.currentWeek.startDate,
+      this.currentWeek.endDate
+    );
+  }
+
+  formatTimeRange(range: { start: string; end: string }): string {
+    const start = new Date(range.start);
+    const end = new Date(range.end);
+    
+    const startStr = `${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`;
+    const endStr = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
+    
     return `${startStr} - ${endStr}`;
   }
   

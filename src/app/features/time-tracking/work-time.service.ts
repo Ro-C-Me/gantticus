@@ -20,6 +20,25 @@ export interface WorkTimeData {
 }
 
 /**
+ * Repräsentiert einen zusammenhängenden Zeitraum (möglicherweise aus mehreren Blöcken zusammengefasst)
+ */
+export interface TimeRange {
+  start: string;  // ISO datetime
+  end: string;    // ISO datetime (nie null, da zusammengefasst)
+}
+
+/**
+ * Repräsentiert die Zusammenfassung eines Tages
+ */
+export interface DaySummary {
+  date: string;           // ISO date: "2026-01-09"
+  dayName: string;        // "Mo", "Di", etc.
+  formattedDate: string;  // "12.01.26"
+  ranges: TimeRange[];    // Alle Zeiträume des Tages
+  totalMs: number;        // Gesamtzeit in Millisekunden
+}
+
+/**
  * Service zur Verwaltung der Arbeitszeiterfassung
  * - Startet und stoppt Arbeitszeitblöcke
  * - Persistiert Daten im LocalStorage
@@ -486,5 +505,85 @@ export class WorkTimeService {
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);
     });
+  }
+
+  /**
+   * Erstellt eine Wochenübersicht mit zusammengefassten Zeiträumen für Export
+   * Blöcke ohne Pausen dazwischen werden automatisch zusammengefasst
+   * @param startDate Startdatum der Woche
+   * @param endDate Enddatum der Woche
+   * @returns Array von DaySummary für jeden Tag mit Arbeitszeit
+   */
+  getWeekSummary(startDate: Date, endDate: Date): DaySummary[] {
+    const summaries: DaySummary[] = [];
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      const dateStr = this.toDateString(currentDate);
+      const dayBlocks = this.getBlocksForDate(dateStr);
+      
+      // Nur Tage mit Arbeitszeit
+      if (dayBlocks.length === 0) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        continue;
+      }
+      
+      // Sortiere Blöcke nach Startzeit
+      const sortedBlocks = [...dayBlocks].sort((a, b) => 
+        new Date(a.start).getTime() - new Date(b.start).getTime()
+      );
+      
+      // Fasse zusammenhängende Blöcke zusammen
+      const ranges: TimeRange[] = [];
+      let currentRange: TimeRange | null = null;
+      
+      for (const block of sortedBlocks) {
+        const blockEnd = block.end || new Date().toISOString(); // Laufende Blöcke: bis jetzt
+        
+        if (!currentRange) {
+          // Erster Block
+          currentRange = { start: block.start, end: blockEnd };
+        } else if (currentRange.end === block.start) {
+          // Block schließt direkt an → erweitern
+          currentRange.end = blockEnd;
+        } else {
+          // Lücke gefunden → aktuellen Range speichern und neuen starten
+          ranges.push(currentRange);
+          currentRange = { start: block.start, end: blockEnd };
+        }
+      }
+      
+      // Letzten Range hinzufügen
+      if (currentRange) {
+        ranges.push(currentRange);
+      }
+      
+      // Berechne Tagesgesamtzeit
+      const totalMs = ranges.reduce((sum, range) => {
+        const start = new Date(range.start).getTime();
+        const end = new Date(range.end).getTime();
+        return sum + (end - start);
+      }, 0);
+      
+      // Formatiere Datum
+      const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+      const dayName = dayNames[currentDate.getDay()];
+      const day = currentDate.getDate().toString().padStart(2, '0');
+      const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+      const year = currentDate.getFullYear().toString().slice(-2);
+      const formattedDate = `${day}.${month}.${year}`;
+      
+      summaries.push({
+        date: dateStr,
+        dayName,
+        formattedDate,
+        ranges,
+        totalMs
+      });
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return summaries;
   }
 }
