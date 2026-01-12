@@ -106,9 +106,7 @@
                [class.disabled]="!canResizeStart(block)"></div>
           
           <!-- Block Content -->
-          <div class="time-block-content p-1 small" 
-               style="cursor: pointer;"
-               (click)="openProjectModal($event, block)">
+          <div class="time-block-content p-1 small">
             <div class="fw-bold">{{ formatBlockTime(block) }}</div>
             <div>{{ formatDuration(getBlockDuration(block)) }}</div>
             <div class="text-truncate" *ngIf="block.projectName">

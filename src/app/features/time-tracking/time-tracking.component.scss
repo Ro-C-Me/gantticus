@@ -118,6 +118,7 @@
   overflow: visible;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   pointer-events: auto;
+  cursor: pointer; // Gesamter Block ist klickbar
   
   &.time-block-completed {
     background-color: #0d6efd;
@@ -302,13 +303,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  pointer-events: auto; // Klickbar für Projekt-Zuordnung
+  pointer-events: none; // Damit Clicks durch zum Block gehen
   position: relative;
-  z-index: 5; // Über Resize-Handles
-  
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
 }
 
 .week-summary {

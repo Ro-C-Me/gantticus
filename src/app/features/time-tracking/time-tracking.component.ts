@@ -428,40 +428,50 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
   
   onBlockClick(event: MouseEvent, block: WorkTimeBlock): void {
-    if (!this.splitModeActive || this.splitModeBlock?.id !== block.id) {
+    // Wenn im Split-Modus: Split durchführen
+    if (this.splitModeActive && this.splitModeBlock?.id === block.id) {
+      event.preventDefault();
       event.stopPropagation();
+      
+      // Berechne Split-Position
+      const blockElement = event.currentTarget as HTMLElement;
+      const rect = blockElement.getBoundingClientRect();
+      const relativeY = event.clientY - rect.top;
+      
+      // Berechne Zeit an Klick-Position
+      const blockStart = new Date(block.start).getTime();
+      const blockEnd = block.end ? new Date(block.end).getTime() : Date.now();
+      const blockDuration = blockEnd - blockStart;
+      const blockHeight = rect.height;
+      
+      const ratio = relativeY / blockHeight;
+      const splitTimeMs = blockStart + (blockDuration * ratio);
+      
+      // Snap to 5 minutes
+      const snappedTime = this.snapTo5Minutes(splitTimeMs);
+      const splitTimeISO = new Date(snappedTime).toISOString();
+      
+      // Split durchführen
+      const result = this.workTimeService.splitBlock(block.id, splitTimeISO);
+      
+      if (result) {
+        console.log('Block split successful:', result);
+        this.cancelSplitMode();
+      } else {
+        console.error('Failed to split block');
+      }
       return;
     }
     
-    event.preventDefault();
-    event.stopPropagation();
-    
-    // Berechne Split-Position
-    const blockElement = event.currentTarget as HTMLElement;
-    const rect = blockElement.getBoundingClientRect();
-    const relativeY = event.clientY - rect.top;
-    
-    // Berechne Zeit an Klick-Position
-    const blockStart = new Date(block.start).getTime();
-    const blockEnd = block.end ? new Date(block.end).getTime() : Date.now();
-    const blockDuration = blockEnd - blockStart;
-    const blockHeight = rect.height;
-    
-    const ratio = relativeY / blockHeight;
-    const splitTimeMs = blockStart + (blockDuration * ratio);
-    
-    // Snap to 5 minutes
-    const snappedTime = this.snapTo5Minutes(splitTimeMs);
-    const splitTimeISO = new Date(snappedTime).toISOString();
-    
-    // Split durchführen
-    const result = this.workTimeService.splitBlock(block.id, splitTimeISO);
-    
-    if (result) {
-      console.log('Block split successful:', result);
-      this.cancelSplitMode();
-    } else {
-      console.error('Failed to split block');
+    // Wenn nicht im Split-Modus: Projekt-Modal öffnen
+    if (!this.splitModeActive) {
+      // Prüfe ob Click auf Button war
+      const target = event.target as HTMLElement;
+      if (target.closest('.block-actions') || target.closest('.resize-handle') || target.closest('.merge-button')) {
+        return; // Ignoriere Clicks auf Buttons und Resize-Handles
+      }
+      
+      this.openProjectModal(event, block);
     }
   }
   
