@@ -14,6 +14,12 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
   todayTotalMs = 0;
   currentBlock: WorkTimeBlock | null = null;
   
+  // Projekt-Auswahl
+  availableProjects: string[] = [];
+  selectedProjectName: string = '';
+  showNewProjectInput: boolean = false;
+  newProjectName: string = '';
+  
   private subscriptions = new Subscription();
 
   constructor(private workTimeService: WorkTimeService) {}
@@ -22,9 +28,13 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
     // Initialer Zustand
     this.updateState();
     
+    // Lade verfügbare Projekte
+    this.loadAvailableProjects();
+    
     // Live-Updates jede Sekunde
     const totalSub = this.workTimeService.getTodayTotal$().subscribe(() => {
       this.updateState();
+      this.loadAvailableProjects();
     });
     
     this.subscriptions.add(totalSub);
@@ -41,14 +51,92 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
     this.isRunning = this.workTimeService.isRunning();
     this.todayTotalMs = this.workTimeService.getTodayTotal();
     this.currentBlock = this.workTimeService.getCurrentBlock();
+    
+    // Setze selectedProjectName auf aktuelles Projekt des laufenden Blocks
+    if (this.isRunning && this.currentBlock) {
+      this.selectedProjectName = this.currentBlock.projectName || '';
+    }
+  }
+
+  /**
+   * Lädt die verfügbaren Projekte aus dem Service
+   */
+  private loadAvailableProjects(): void {
+    this.availableProjects = this.workTimeService.getUsedProjectNames();
   }
 
   /**
    * Startet die Arbeitszeiterfassung
    */
   onStartWork(): void {
-    this.workTimeService.startWork();
+    // Übergebe das ausgewählte Projekt (oder undefined wenn "Kein Projekt")
+    const projectName = this.selectedProjectName || undefined;
+    this.workTimeService.startWork(projectName);
     this.updateState();
+  }
+
+  /**
+   * Wird aufgerufen wenn Projekt während laufendem Block geändert wird
+   */
+  onRunningProjectChange(value: string): void {
+    if (value === '__new__') {
+      this.showNewProjectInput = true;
+      this.newProjectName = '';
+      this.selectedProjectName = this.currentBlock?.projectName || '';
+      
+      // Fokus auf Input-Feld setzen
+      setTimeout(() => {
+        const input = document.getElementById('newProjectInputWidget') as HTMLInputElement;
+        if (input) {
+          input.focus();
+        }
+      }, 100);
+    } else {
+      // Projekt direkt zuordnen
+      this.showNewProjectInput = false;
+      if (this.currentBlock) {
+        this.workTimeService.assignProjectToBlock(this.currentBlock.id, value || null);
+        this.updateState();
+      }
+    }
+  }
+
+  /**
+   * Erstellt ein neues Projekt und ordnet es dem laufenden Block zu
+   */
+  createNewProjectForRunningBlock(): void {
+    const projectName = this.newProjectName.trim();
+    
+    if (!projectName) {
+      this.cancelNewProject();
+      return;
+    }
+
+    if (!this.currentBlock) {
+      console.error('Kein laufender Block vorhanden');
+      this.cancelNewProject();
+      return;
+    }
+
+    // Ordne das neue Projekt dem laufenden Block zu
+    this.workTimeService.assignProjectToBlock(this.currentBlock.id, projectName);
+    
+    this.showNewProjectInput = false;
+    this.newProjectName = '';
+    
+    // State aktualisieren
+    this.updateState();
+    this.loadAvailableProjects();
+  }
+
+  /**
+   * Bricht die Erstellung eines neuen Projekts ab
+   */
+  cancelNewProject(): void {
+    this.showNewProjectInput = false;
+    this.newProjectName = '';
+    // Setze Dropdown zurück auf aktuelles Projekt
+    this.selectedProjectName = this.currentBlock?.projectName || '';
   }
 
   /**
@@ -91,5 +179,13 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
     const start = new Date(this.currentBlock.start).getTime();
     const now = Date.now();
     return now - start;
+  }
+
+  /**
+   * Gibt die Farbe für das aktuelle Projekt zurück
+   */
+  getCurrentProjectColor(): string {
+    if (!this.currentBlock?.projectName) return '#6c757d';
+    return this.workTimeService.getProjectColor(this.currentBlock.projectName);
   }
 }

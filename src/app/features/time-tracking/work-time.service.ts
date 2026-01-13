@@ -91,15 +91,17 @@ export class WorkTimeService {
 
   /**
    * Startet einen neuen Arbeitszeitblock
+   * @param projectName Optional: Name des Projekts für den Block
    * @returns Die ID des neuen Blocks
    */
-  startWork(): string {
+  startWork(projectName?: string): string {
     const now = new Date();
     const newBlock: WorkTimeBlock = {
       id: this.generateUUID(),
       date: this.toDateString(now),
       start: now.toISOString(),
-      end: null
+      end: null,
+      projectName: projectName || undefined
     };
 
     const data = this.dataSubject.value;

@@ -1,4 +1,36 @@
 .timer-widget {
+  .project-select {
+    select {
+      min-width: 150px;
+      max-width: 200px;
+      font-size: 0.875rem;
+    }
+  }
+
+  .new-project-input {
+    input {
+      min-width: 150px;
+      max-width: 200px;
+      font-size: 0.875rem;
+    }
+
+    button {
+      padding: 0.25rem 0.5rem;
+      
+      i {
+        font-size: 0.875rem;
+      }
+    }
+  }
+
+  .current-project {
+    .badge {
+      font-size: 0.875rem;
+      font-weight: normal;
+      padding: 0.35rem 0.65rem;
+    }
+  }
+
   .timer-display {
     cursor: pointer;
     padding: 0.25rem 0.5rem;
