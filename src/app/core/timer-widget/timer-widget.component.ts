@@ -15,10 +15,7 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
   currentBlock: WorkTimeBlock | null = null;
   
   // Projekt-Auswahl
-  availableProjects: string[] = [];
   selectedProjectName: string = '';
-  showNewProjectInput: boolean = false;
-  newProjectName: string = '';
   
   private subscriptions = new Subscription();
 
@@ -28,13 +25,9 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
     // Initialer Zustand
     this.updateState();
     
-    // Lade verfügbare Projekte
-    this.loadAvailableProjects();
-    
     // Live-Updates jede Sekunde
     const totalSub = this.workTimeService.getTodayTotal$().subscribe(() => {
       this.updateState();
-      this.loadAvailableProjects();
     });
     
     this.subscriptions.add(totalSub);
@@ -59,13 +52,6 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Lädt die verfügbaren Projekte aus dem Service
-   */
-  private loadAvailableProjects(): void {
-    this.availableProjects = this.workTimeService.getUsedProjectNames();
-  }
-
-  /**
    * Startet die Arbeitszeiterfassung
    */
   onStartWork(): void {
@@ -76,67 +62,22 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Wird aufgerufen wenn Projekt während laufendem Block geändert wird
+   * Event-Handler für Projekt-Auswahl (vor Start)
    */
-  onRunningProjectChange(value: string): void {
-    if (value === '__new__') {
-      this.showNewProjectInput = true;
-      this.newProjectName = '';
-      this.selectedProjectName = this.currentBlock?.projectName || '';
-      
-      // Fokus auf Input-Feld setzen
-      setTimeout(() => {
-        const input = document.getElementById('newProjectInputWidget') as HTMLInputElement;
-        if (input) {
-          input.focus();
-        }
-      }, 100);
-    } else {
-      // Projekt direkt zuordnen
-      this.showNewProjectInput = false;
-      if (this.currentBlock) {
-        this.workTimeService.assignProjectToBlock(this.currentBlock.id, value || null);
-        this.updateState();
-      }
-    }
+  onProjectSelected(projectName: string): void {
+    this.selectedProjectName = projectName;
   }
 
   /**
-   * Erstellt ein neues Projekt und ordnet es dem laufenden Block zu
+   * Event-Handler für Projekt-Auswahl während Block läuft
    */
-  createNewProjectForRunningBlock(): void {
-    const projectName = this.newProjectName.trim();
+  onRunningProjectSelected(projectName: string): void {
+    this.selectedProjectName = projectName;
     
-    if (!projectName) {
-      this.cancelNewProject();
-      return;
+    if (this.currentBlock) {
+      this.workTimeService.assignProjectToBlock(this.currentBlock.id, projectName || null);
+      this.updateState();
     }
-
-    if (!this.currentBlock) {
-      console.error('Kein laufender Block vorhanden');
-      this.cancelNewProject();
-      return;
-    }
-
-    // Ordne das neue Projekt dem laufenden Block zu
-    this.workTimeService.assignProjectToBlock(this.currentBlock.id, projectName);
-    
-    this.showNewProjectInput = false;
-    this.newProjectName = '';
-    
-    // State aktualisieren
-    this.updateState();
-    this.loadAvailableProjects();
-  }
-
-  /**
-   * Bricht die Erstellung eines neuen Projekts ab
-   */
-  cancelNewProject(): void {
-    this.showNewProjectInput = false;
-    this.newProjectName = '';
-    // Setze Dropdown zurück auf aktuelles Projekt
-    this.selectedProjectName = this.currentBlock?.projectName || '';
   }
 
   /**

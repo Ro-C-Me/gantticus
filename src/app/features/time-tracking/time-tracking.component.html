@@ -243,60 +243,34 @@
           <div class="fw-bold">{{ formatBlockTime(projectModalBlock) }}</div>
         </div>
 
-        <!-- Liste bestehender Projekte -->
-        <div class="mb-3" *ngIf="availableProjects.length > 0 && !showNewProjectInput">
-          <label class="form-label">Bestehendes Projekt wählen:</label>
-          <div class="list-group">
+        <!-- Projekt-Auswahl mit neuer Komponente -->
+        <div class="mb-3">
+          <label class="form-label">Projekt zuordnen:</label>
+          <app-project-selector
+            [selectedProject]="selectedProject"
+            [allowNewProject]="true"
+            (projectSelected)="onProjectSelectFromSelector($event)"
+            size="md"
+          ></app-project-selector>
+        </div>
+
+        <!-- Color Picker für ausgewähltes Projekt -->
+        <div class="mb-3" *ngIf="selectedProject">
+          <label class="form-label">Projektfarbe:</label>
+          <div class="d-flex gap-2 align-items-center">
             <button type="button" 
-                    class="list-group-item list-group-item-action position-relative"
-                    *ngFor="let project of availableProjects"
-                    [class.active]="selectedProject === project"
-                    [style.background-color]="selectedProject === project ? getProjectColor(project) : ''"
-                    [style.color]="selectedProject === project ? '#fff' : ''"
-                    (click)="onProjectSelect(project)">
-              <i class="bi bi-folder me-2"></i>
-              {{ project }}
-              
-              <!-- Color Picker Button auf dem ausgewählten Projekt -->
-              <button type="button" 
-                      class="btn btn-sm color-picker-btn" 
-                      *ngIf="selectedProject === project"
-                      [style.background-color]="selectedColor"
-                      [colorPicker]="selectedColor"
-                      (colorPickerChange)="onColorSelect($event)"
-                      (click)="$event.stopPropagation()"
-                      [cpPosition]="'left'"
-                      [cpOutputFormat]="'hex'"
-                      [cpAlphaChannel]="'disabled'"
-                      title="Farbe ändern">
-                <i class="bi bi-palette"></i>
-              </button>
+                    class="btn btn-lg color-preview-btn" 
+                    [style.background-color]="selectedColor"
+                    [colorPicker]="selectedColor"
+                    (colorPickerChange)="onColorSelect($event)"
+                    [cpPosition]="'left'"
+                    [cpOutputFormat]="'hex'"
+                    [cpAlphaChannel]="'disabled'"
+                    title="Farbe ändern">
+              <i class="bi bi-palette text-white"></i>
             </button>
+            <span class="small text-muted">{{ selectedColor }}</span>
           </div>
-        </div>
-
-        <!-- Neues Projekt erstellen -->
-        <div class="mb-3" *ngIf="!showNewProjectInput">
-          <button type="button" class="btn btn-outline-primary w-100" (click)="onNewProjectClick()">
-            <i class="bi bi-plus-circle me-2"></i>
-            Neues Projekt erstellen
-          </button>
-        </div>
-
-        <!-- Input für neues Projekt -->
-        <div class="mb-3" *ngIf="showNewProjectInput">
-          <label class="form-label">Neuer Projektname:</label>
-          <input type="text" 
-                 class="form-control" 
-                 id="newProjectInput"
-                 [(ngModel)]="newProjectName"
-                 placeholder="z.B. Projekt Alpha"
-                 (keyup.enter)="assignProject()">
-          <button type="button" 
-                  class="btn btn-link btn-sm" 
-                  (click)="showNewProjectInput = false">
-            Abbrechen
-          </button>
         </div>
 
         <!-- Zuweisung entfernen -->
@@ -314,7 +288,7 @@
         <button type="button" 
                 class="btn btn-primary" 
                 (click)="assignProject()"
-                [disabled]="!selectedProject && !newProjectName.trim()">
+                [disabled]="!selectedProject">
           Zuordnen
         </button>
       </div>

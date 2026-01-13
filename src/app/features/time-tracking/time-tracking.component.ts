@@ -55,10 +55,7 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   // Project Assignment Modal State
   showProjectModal: boolean = false;
   projectModalBlock: WorkTimeBlock | null = null;
-  availableProjects: string[] = [];
   selectedProject: string = '';
-  newProjectName: string = '';
-  showNewProjectInput: boolean = false;
   selectedColor: string = '';
   
   private subscription?: Subscription;
@@ -284,10 +281,7 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     event.stopPropagation();
 
     this.projectModalBlock = block;
-    this.availableProjects = this.workTimeService.getUsedProjectNames();
     this.selectedProject = block.projectName || '';
-    this.newProjectName = '';
-    this.showNewProjectInput = false;
     this.selectedColor = block.projectName ? this.workTimeService.getProjectColor(block.projectName) : '';
     this.showProjectModal = true;
   }
@@ -296,42 +290,20 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showProjectModal = false;
     this.projectModalBlock = null;
     this.selectedProject = '';
-    this.newProjectName = '';
-    this.showNewProjectInput = false;
   }
 
-  onProjectSelect(projectName: string): void {
+  /**
+   * Event-Handler für Projekt-Auswahl aus ProjectSelector
+   */
+  onProjectSelectFromSelector(projectName: string): void {
     this.selectedProject = projectName;
-    this.showNewProjectInput = false;
-    this.selectedColor = this.workTimeService.getProjectColor(projectName);
-  }
-
-  onNewProjectClick(): void {
-    this.showNewProjectInput = true;
-    this.selectedProject = '';
-    // Focus auf Input setzen
-    setTimeout(() => {
-      const input = document.getElementById('newProjectInput') as HTMLInputElement;
-      input?.focus();
-    }, 100);
+    this.selectedColor = projectName ? this.workTimeService.getProjectColor(projectName) : '';
   }
 
   assignProject(): void {
     if (!this.projectModalBlock) return;
 
-    let projectName: string | null = null;
-
-    if (this.showNewProjectInput) {
-      // Neues Projekt
-      projectName = this.newProjectName.trim();
-      if (projectName === '') {
-        return; // Leere Eingabe ignorieren
-      }
-    } else if (this.selectedProject) {
-      // Bestehendes Projekt
-      projectName = this.selectedProject;
-    }
-    // Wenn beides leer: projectName bleibt null → Zuweisung entfernen
+    const projectName = this.selectedProject || null;
 
     const success = this.workTimeService.assignProjectToBlock(
       this.projectModalBlock.id,
@@ -360,7 +332,7 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedColor = color;
     
     // Speichere Farbe sofort wenn Projekt bereits zugeordnet
-    if (this.selectedProject && !this.showNewProjectInput) {
+    if (this.selectedProject) {
       this.workTimeService.setProjectColor(this.selectedProject, color);
     }
   }

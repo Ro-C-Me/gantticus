@@ -23,6 +23,7 @@ import { ClickOutsideDirective } from './shared/directives/click-outside.directi
 import { GanttFeatureComponent } from './features/gantt/gantt-feature.component';
 import { TimeTrackingComponent } from './features/time-tracking/time-tracking.component';
 import { TimerWidgetComponent } from './core/timer-widget/timer-widget.component';
+import { ProjectSelectorComponent } from './shared/project-selector/project-selector.component';
 
 registerLocaleData(localeDe, 'de');
 registerLocaleData(localeEn, 'en');
@@ -46,6 +47,7 @@ registerLocaleData(localeEn, 'en');
     FormsModule,
     ReactiveFormsModule,
     ColorPickerDirective,
+    ProjectSelectorComponent,
     TaskTitleComponent,
     GroupTitleComponent,
     DependencyManagementComponent,

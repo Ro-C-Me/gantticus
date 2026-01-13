@@ -1,61 +1,21 @@
 <div class="timer-widget d-flex align-items-center gap-2">
-  <!-- Projekt-Auswahl Dropdown (nur wenn NICHT läuft) -->
-  <div class="project-select" *ngIf="!isRunning">
-    <select 
-      class="form-select form-select-sm"
-      [(ngModel)]="selectedProjectName"
-      title="Projekt auswählen"
-    >
-      <option value="">Kein Projekt</option>
-      <option *ngFor="let project of availableProjects" [value]="project">
-        {{ project }}
-      </option>
-    </select>
-  </div>
+  <!-- Projekt-Auswahl vor Start -->
+  <app-project-selector
+    *ngIf="!isRunning"
+    [selectedProject]="selectedProjectName"
+    [allowNewProject]="false"
+    (projectSelected)="onProjectSelected($event)"
+    size="sm"
+  ></app-project-selector>
 
   <!-- Projekt-Auswahl während Block läuft -->
-  <div class="project-select" *ngIf="isRunning && !showNewProjectInput">
-    <select 
-      class="form-select form-select-sm"
-      [(ngModel)]="selectedProjectName"
-      (ngModelChange)="onRunningProjectChange($event)"
-      title="Projekt zuordnen/ändern"
-    >
-      <option value="">Kein Projekt</option>
-      <option *ngFor="let project of availableProjects" [value]="project">
-        {{ project }}
-      </option>
-      <option value="__new__">+ Neues Projekt</option>
-    </select>
-  </div>
-
-  <!-- Neues Projekt Input (nur während Block läuft) -->
-  <div class="new-project-input d-flex gap-1" *ngIf="isRunning && showNewProjectInput">
-    <input 
-      type="text"
-      class="form-control form-control-sm"
-      id="newProjectInputWidget"
-      [(ngModel)]="newProjectName"
-      (keyup.enter)="createNewProjectForRunningBlock()"
-      (keyup.escape)="cancelNewProject()"
-      placeholder="Neues Projekt..."
-      maxlength="50"
-    />
-    <button 
-      class="btn btn-sm btn-success"
-      (click)="createNewProjectForRunningBlock()"
-      title="Erstellen"
-    >
-      <i class="bi bi-check"></i>
-    </button>
-    <button 
-      class="btn btn-sm btn-secondary"
-      (click)="cancelNewProject()"
-      title="Abbrechen"
-    >
-      <i class="bi bi-x"></i>
-    </button>
-  </div>
+  <app-project-selector
+    *ngIf="isRunning"
+    [selectedProject]="selectedProjectName"
+    [allowNewProject]="true"
+    (projectSelected)="onRunningProjectSelected($event)"
+    size="sm"
+  ></app-project-selector>
 
   <!-- Timer-Anzeige -->
   <div 
