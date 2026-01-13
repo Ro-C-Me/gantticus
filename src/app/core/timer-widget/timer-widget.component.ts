@@ -48,6 +48,9 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
     // Setze selectedProjectName auf aktuelles Projekt des laufenden Blocks
     if (this.isRunning && this.currentBlock) {
       this.selectedProjectName = this.currentBlock.projectName || '';
+    } else {
+      // Wenn nicht running, reset auf leer
+      this.selectedProjectName = '';
     }
   }
 

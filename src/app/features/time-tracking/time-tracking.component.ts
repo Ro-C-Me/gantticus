@@ -315,19 +315,6 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  removeProjectAssignment(): void {
-    if (!this.projectModalBlock) return;
-
-    const success = this.workTimeService.assignProjectToBlock(
-      this.projectModalBlock.id,
-      null
-    );
-
-    if (success) {
-      this.closeProjectModal();
-    }
-  }
-
   onColorSelect(color: string): void {
     this.selectedColor = color;
     

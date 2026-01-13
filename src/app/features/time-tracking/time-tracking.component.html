@@ -272,14 +272,6 @@
             <span class="small text-muted">{{ selectedColor }}</span>
           </div>
         </div>
-
-        <!-- Zuweisung entfernen -->
-        <div class="mb-3" *ngIf="projectModalBlock?.projectName">
-          <button type="button" class="btn btn-outline-danger w-100" (click)="removeProjectAssignment()">
-            <i class="bi bi-x-circle me-2"></i>
-            Projekt-Zuordnung entfernen
-          </button>
-        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="closeProjectModal()">
@@ -287,8 +279,7 @@
         </button>
         <button type="button" 
                 class="btn btn-primary" 
-                (click)="assignProject()"
-                [disabled]="!selectedProject">
+                (click)="assignProject()">
           Zuordnen
         </button>
       </div>
