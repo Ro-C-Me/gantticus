@@ -138,19 +138,6 @@
     // Gestrichelter Border als zusätzlicher Indikator
     border: 2px dashed rgba(255, 255, 255, 0.5);
   }
-
-  // Pulsieren Animation
-  @keyframes pulse-running {
-    0%, 100% {
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(255, 255, 255, 0.7);
-    }
-    50% {
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.3);
-    }
-  }
-    border: 2px dashed rgba(255, 255, 255, 0.5);
-    animation: pulse 2s infinite;
-  }
   
   // Split-Modus: Block wird hervorgehoben
   &.split-mode-active {
@@ -386,5 +373,15 @@
   i {
     color: #fff;
     font-size: 14px;
+  }
+}
+
+// Animation für laufende Zeitblöcke
+@keyframes pulse-running {
+  0%, 100% {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(255, 255, 255, 0.7);
+  }
+  50% {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 4px rgba(255, 255, 255, 0.3);
   }
 }
