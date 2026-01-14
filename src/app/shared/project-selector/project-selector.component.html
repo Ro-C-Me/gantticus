@@ -1,0 +1,49 @@
+<div class="project-selector">
+  <!-- Dropdown für Projektauswahl -->
+  <div *ngIf="!showNewProjectInput">
+    <select 
+      class="form-select"
+      [class]="getSizeClass()"
+      [(ngModel)]="selectedProject"
+      (ngModelChange)="onDropdownChange($event)"
+      [title]="placeholder"
+    >
+      <option value="">&lt;Kein Projekt&gt;</option>
+      <option *ngFor="let project of availableProjects" [value]="project">
+        {{ project }}
+      </option>
+      <option *ngIf="allowNewProject" value="__new__">+ Neues Projekt</option>
+    </select>
+  </div>
+
+  <!-- Input für neues Projekt -->
+  <div class="new-project-input d-flex gap-1" *ngIf="showNewProjectInput">
+    <input 
+      type="text"
+      class="form-control"
+      [class]="getSizeClass()"
+      id="newProjectInput"
+      [(ngModel)]="newProjectName"
+      (keyup.enter)="createNewProject()"
+      (keyup.escape)="cancelNewProject()"
+      placeholder="Neuer Projektname..."
+      maxlength="50"
+    />
+    <button 
+      class="btn btn-success"
+      [class]="getSizeClass()"
+      (click)="createNewProject()"
+      title="Erstellen"
+    >
+      <i class="bi bi-check"></i>
+    </button>
+    <button 
+      class="btn btn-secondary"
+      [class]="getSizeClass()"
+      (click)="cancelNewProject()"
+      title="Abbrechen"
+    >
+      <i class="bi bi-x"></i>
+    </button>
+  </div>
+</div>
