@@ -61,6 +61,9 @@ export class WorkTimeService {
   private readonly STORAGE_KEY = 'work-time-blocks';
   private readonly COLORS_STORAGE_KEY = 'project-colors';
   
+  // Aufbewahrungsdauer für Zeiterfassungsdaten in Kalenderwochen
+  private readonly RETENTION_WEEKS = 6;
+  
   // Vordefinierte Farbpalette
   private readonly COLOR_PALETTE = [
     '#ef4444', // rot
@@ -645,20 +648,16 @@ export class WorkTimeService {
   }
 
   /**
-   * Gibt eine sortierte Liste aller bereits verwendeten Projektnamen zurück
+   * Gibt alle registrierten Projektnamen zurück (aus der Projekt-Registry)
+   * Projekte werden registriert, sobald sie erstellt werden, unabhängig davon
+   * ob sie bereits einem Block zugewiesen wurden.
    * @returns Array von Projektnamen (unique, sortiert)
    */
   getUsedProjectNames(): string[] {
-    const data = this.dataSubject.value;
-    const projectNames = new Set<string>();
-
-    data.blocks.forEach(block => {
-      if (block.projectName && block.projectName.trim() !== '') {
-        projectNames.add(block.projectName.trim());
-      }
-    });
-
-    return Array.from(projectNames).sort((a, b) => 
+    const colors = this.loadProjectColors();
+    const projectNames = Array.from(colors.keys());
+    
+    return projectNames.sort((a, b) => 
       a.localeCompare(b, 'de', { sensitivity: 'base' })
     );
   }
@@ -797,6 +796,36 @@ export class WorkTimeService {
   }
 
   /**
+   * Registriert ein neues Projekt in der Projekt-Registry mit einer automatischen Farbe
+   * Wird verwendet, wenn ein neues Projekt erstellt wird, bevor es einem Block zugewiesen wurde
+   */
+  registerProject(projectName: string): void {
+    if (!projectName || projectName.trim() === '') {
+      return;
+    }
+
+    const colors = this.loadProjectColors();
+    
+    // Nur registrieren wenn noch nicht vorhanden
+    if (!colors.has(projectName)) {
+      const newColor = this.getNextAvailableColor(colors);
+      colors.set(projectName, newColor);
+      this.saveProjectColors(colors);
+      
+      // Trigger state update damit Komponenten reagieren können
+      this.notifyStateChange();
+    }
+  }
+  
+  /**
+   * Triggert ein State-Update ohne die Blöcke zu ändern
+   * Verwendet für Änderungen an Projekt-Registry
+   */
+  private notifyStateChange(): void {
+    this.dataSubject.next(this.dataSubject.value);
+  }
+
+  /**
    * Gibt eine zufällige verfügbare Farbe aus der Palette zurück
    */
   private getNextAvailableColor(colors: Map<string, string>): string {
@@ -821,5 +850,92 @@ export class WorkTimeService {
    */
   getColorPalette(): string[] {
     return [...this.COLOR_PALETTE];
+  }
+
+  // ========== Story 16: Automatische Datenbereinigung ==========
+
+  /**
+   * Bereinigt alte Zeiterfassungsdaten und nicht mehr verwendete Projekte
+   * Löscht alle Blöcke aus Kalenderwochen, die älter als RETENTION_WEEKS sind
+   * Entfernt anschließend Projekte ohne verbleibende Blöcke aus der Registry
+   * 
+   * @returns Statistik über gelöschte Daten
+   */
+  cleanupOldData(): { deletedBlocks: number, deletedProjects: number } {
+    const data = this.dataSubject.value;
+    
+    // Berechne Grenz-Datum (6 Kalenderwochen zurück)
+    const today = new Date();
+    const cutoffDate = new Date(today);
+    cutoffDate.setDate(cutoffDate.getDate() - (this.RETENTION_WEEKS * 7));
+    
+    // Finde Montag der Grenz-Woche (damit wir ganze Wochen löschen)
+    const cutoffMonday = this.getMonday(cutoffDate);
+    
+    // Zähle Blöcke vor der Bereinigung
+    const initialBlockCount = data.blocks.length;
+    
+    // Filter: Behalte nur Blöcke, die am oder nach dem Grenz-Montag liegen
+    const filteredBlocks = data.blocks.filter(block => {
+      const blockDate = new Date(block.date);
+      return blockDate >= cutoffMonday;
+    });
+    
+    const deletedBlocks = initialBlockCount - filteredBlocks.length;
+    
+    // Wenn keine Blöcke gelöscht wurden, keine weiteren Aktionen nötig
+    if (deletedBlocks === 0) {
+      return { deletedBlocks: 0, deletedProjects: 0 };
+    }
+    
+    // Sammle alle Projektnamen aus verbleibenden Blöcken
+    const remainingProjects = new Set<string>();
+    filteredBlocks.forEach(block => {
+      if (block.projectName && block.projectName.trim() !== '') {
+        remainingProjects.add(block.projectName);
+      }
+    });
+    
+    // Bereinige Projekt-Registry: Lösche Projekte ohne verbleibende Blöcke
+    const colors = this.loadProjectColors();
+    const initialProjectCount = colors.size;
+    const projectsToDelete: string[] = [];
+    
+    colors.forEach((color, projectName) => {
+      if (!remainingProjects.has(projectName)) {
+        projectsToDelete.push(projectName);
+      }
+    });
+    
+    // Lösche die Projekte
+    projectsToDelete.forEach(projectName => {
+      colors.delete(projectName);
+    });
+    
+    const deletedProjects = projectsToDelete.length;
+    
+    // Speichere gefilterte Blöcke
+    if (deletedBlocks > 0) {
+      data.blocks = filteredBlocks;
+      this.saveToStorage(data);
+      this.dataSubject.next(data);
+    }
+    
+    // Speichere bereinigte Projekt-Registry
+    if (deletedProjects > 0) {
+      this.saveProjectColors(colors);
+    }
+    
+    return { deletedBlocks, deletedProjects };
+  }
+  
+  /**
+   * Gibt den Montag einer Woche zurück (Helper für cleanupOldData)
+   */
+  private getMonday(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
   }
 }

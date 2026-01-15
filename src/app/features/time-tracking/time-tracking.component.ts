@@ -63,6 +63,9 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(private workTimeService: WorkTimeService) {}
   
   ngOnInit(): void {
+    // Story 16: Bereinige alte Daten beim Initialisieren
+    this.workTimeService.cleanupOldData();
+    
     this.loadWeekData();
     
     // Live-Updates abonnieren

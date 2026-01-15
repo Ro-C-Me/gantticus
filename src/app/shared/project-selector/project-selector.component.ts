@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WorkTimeService } from '../../features/time-tracking/work-time.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-project-selector',
@@ -10,7 +11,7 @@ import { WorkTimeService } from '../../features/time-tracking/work-time.service'
   styleUrl: './project-selector.component.scss',
   standalone: true
 })
-export class ProjectSelectorComponent implements OnInit {
+export class ProjectSelectorComponent implements OnInit, OnDestroy {
   @Input() selectedProject: string = '';
   @Input() allowNewProject: boolean = true;
   @Input() placeholder: string = 'Projekt auswählen';
@@ -21,10 +22,21 @@ export class ProjectSelectorComponent implements OnInit {
   showNewProjectInput: boolean = false;
   newProjectName: string = '';
   
+  private subscription?: Subscription;
+  
   constructor(private workTimeService: WorkTimeService) {}
   
   ngOnInit(): void {
     this.loadAvailableProjects();
+    
+    // Live-Updates abonnieren: Wenn sich der Service-State ändert, Projekte neu laden
+    this.subscription = this.workTimeService.state$.subscribe(() => {
+      this.loadAvailableProjects();
+    });
+  }
+  
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
   }
   
   /**
@@ -68,6 +80,9 @@ export class ProjectSelectorComponent implements OnInit {
       return;
     }
     
+    // Projekt sofort im Service registrieren (mit automatischer Farbe)
+    this.workTimeService.registerProject(projectName);
+    
     this.selectedProject = projectName;
     this.showNewProjectInput = false;
     this.newProjectName = '';
@@ -75,8 +90,7 @@ export class ProjectSelectorComponent implements OnInit {
     // Emit das neue Projekt
     this.projectSelected.emit(projectName);
     
-    // Projekte neu laden
-    this.loadAvailableProjects();
+    // Projekte werden automatisch über state$-Subscription neu geladen
   }
   
   /**
