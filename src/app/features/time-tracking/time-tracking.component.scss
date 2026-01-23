@@ -54,6 +54,11 @@
     &.weekend-header {
       background-color: #e9ecef;
     }
+    
+    &.violation-warning {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
   }
   
   .time-label {

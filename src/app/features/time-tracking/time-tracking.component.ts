@@ -708,4 +708,205 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
       }, 0);
     }
   }
+
+  // --- Arbeitszeitgesetz Prüfungen ---
+
+  /**
+   * Prüft, ob für einen Tag die 30-Minuten-Pausenregel nach 6h Arbeit eingehalten wurde.
+   * Nach 6h Arbeit müssen mindestens 30 Minuten Pause gemacht worden sein.
+   * 
+   * @param date Der zu prüfende Tag
+   * @returns true wenn die Regel verletzt wurde (Warnung anzeigen), false wenn alles ok ist
+   */
+  violates30MinBreakAfter6Hours(date: Date): boolean {
+    const dayBlocks = this.getDayBlocks(date);
+    
+    // Keine Blöcke oder nur laufende Blöcke -> keine Prüfung möglich
+    if (dayBlocks.length === 0) {
+      return false;
+    }
+    
+    // Sortiere Blöcke nach Startzeit
+    const sortedBlocks = [...dayBlocks].sort((a, b) => 
+      new Date(a.start).getTime() - new Date(b.start).getTime()
+    );
+    
+    let totalWorkTime = 0; // in Millisekunden
+    let totalBreakTime = 0; // in Millisekunden
+    let lastEndTime: number | null = null;
+    
+    for (const block of sortedBlocks) {
+      const blockStart = new Date(block.start).getTime();
+      const blockEnd = block.end ? new Date(block.end).getTime() : Date.now();
+      const blockDuration = blockEnd - blockStart;
+      
+      // Wenn es einen vorherigen Block gab, berechne die Pause
+      if (lastEndTime !== null && blockStart > lastEndTime) {
+        const breakDuration = blockStart - lastEndTime;
+        totalBreakTime += breakDuration;
+      }
+      
+      // Addiere Arbeitszeit
+      totalWorkTime += blockDuration;
+      
+      // Prüfe nach jedem Block die Pausenregeln
+      const sixHoursInMs = 6 * 60 * 60 * 1000;
+      const nineHoursInMs = 9 * 60 * 60 * 1000;
+      const thirtyMinutesInMs = 30 * 60 * 1000;
+      const fortyFiveMinutesInMs = 45 * 60 * 1000;
+      
+      // Prüfung 1: Nach 6h Arbeit müssen min. 30 Minuten Pause gemacht worden sein
+      if (totalWorkTime > sixHoursInMs && totalBreakTime < thirtyMinutesInMs) {
+        return true; // Verstoß!
+      }
+      
+      // Prüfung 2: Bei mehr als 9h Arbeit müssen min. 45 Minuten Pause gemacht worden sein
+      if (totalWorkTime > nineHoursInMs && totalBreakTime < fortyFiveMinutesInMs) {
+        return true; // Verstoß!
+      }
+      
+      lastEndTime = blockEnd;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Prüft, ob zwischen dem letzten Block des Vortags und dem ersten Block des aktuellen Tages
+   * mindestens 11 Stunden Ruhezeit liegen.
+   * 
+   * @param date Der zu prüfende Tag (es wird geprüft, ob zwischen Vortag und diesem Tag genug Ruhe war)
+   * @returns true wenn die Regel verletzt wurde (zu wenig Ruhezeit), false wenn alles ok ist
+   */
+  violates11HourRestPeriod(date: Date): boolean {
+    const currentDayBlocks = this.getDayBlocks(date);
+    
+    // Wenn am aktuellen Tag keine Blöcke vorhanden sind, kein Verstoß
+    if (currentDayBlocks.length === 0) {
+      return false;
+    }
+    
+    // Finde den frühesten Block des aktuellen Tages
+    const sortedCurrentBlocks = [...currentDayBlocks].sort((a, b) => 
+      new Date(a.start).getTime() - new Date(b.start).getTime()
+    );
+    const firstBlockToday = sortedCurrentBlocks[0];
+    const firstStartToday = new Date(firstBlockToday.start).getTime();
+    
+    // Hole Blöcke vom Vortag
+    const yesterday = new Date(date);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayBlocks = this.getDayBlocks(yesterday);
+    
+    // Wenn am Vortag keine Blöcke vorhanden sind, kein Verstoß
+    if (yesterdayBlocks.length === 0) {
+      return false;
+    }
+    
+    // Finde den letzten Block des Vortags
+    const sortedYesterdayBlocks = [...yesterdayBlocks].sort((a, b) => 
+      new Date(a.start).getTime() - new Date(b.start).getTime()
+    );
+    const lastBlockYesterday = sortedYesterdayBlocks[sortedYesterdayBlocks.length - 1];
+    
+    // Wenn der letzte Block gestern noch läuft, können wir nicht prüfen
+    if (!lastBlockYesterday.end) {
+      return false;
+    }
+    
+    const lastEndYesterday = new Date(lastBlockYesterday.end).getTime();
+    
+    // Berechne die Ruhezeit
+    const restPeriod = firstStartToday - lastEndYesterday;
+    const elevenHoursInMs = 11 * 60 * 60 * 1000;
+    
+    // Verstoß, wenn weniger als 11 Stunden Ruhezeit
+    return restPeriod < elevenHoursInMs;
+  }
+
+  /**
+   * Gibt CSS-Klasse für den Tag-Header zurück, je nach Arbeitszeitgesetz-Verstößen
+   */
+  getDayHeaderClass(date: Date): string {
+    if (this.violates30MinBreakAfter6Hours(date) || this.violates11HourRestPeriod(date)) {
+      return 'violation-warning';
+    }
+    return '';
+  }
+
+  /**
+   * Gibt eine Beschreibung der Arbeitszeitgesetz-Verstöße für einen Tag zurück.
+   * Wird als Tooltip angezeigt.
+   */
+  getViolationMessage(date: Date): string {
+    const violations: string[] = [];
+    
+    // Prüfe Pausenregeln (30min nach 6h, 45min nach 9h)
+    const pauseViolation = this.checkPauseViolation(date);
+    if (pauseViolation) {
+      violations.push(pauseViolation);
+    }
+    
+    // Prüfe 11h Ruhezeit
+    if (this.violates11HourRestPeriod(date)) {
+      violations.push('⚠️ Zu wenig Ruhezeit: Weniger als 11h seit Ende der Arbeit gestern');
+    }
+    
+    return violations.join('\n');
+  }
+
+  /**
+   * Prüft die Pausenregeln und gibt eine Beschreibung zurück, falls verletzt.
+   */
+  private checkPauseViolation(date: Date): string | null {
+    const dayBlocks = this.getDayBlocks(date);
+    
+    if (dayBlocks.length === 0) {
+      return null;
+    }
+    
+    const sortedBlocks = [...dayBlocks].sort((a, b) => 
+      new Date(a.start).getTime() - new Date(b.start).getTime()
+    );
+    
+    let totalWorkTime = 0;
+    let totalBreakTime = 0;
+    let lastEndTime: number | null = null;
+    
+    for (const block of sortedBlocks) {
+      const blockStart = new Date(block.start).getTime();
+      const blockEnd = block.end ? new Date(block.end).getTime() : Date.now();
+      const blockDuration = blockEnd - blockStart;
+      
+      if (lastEndTime !== null && blockStart > lastEndTime) {
+        const breakDuration = blockStart - lastEndTime;
+        totalBreakTime += breakDuration;
+      }
+      
+      totalWorkTime += blockDuration;
+      
+      const sixHoursInMs = 6 * 60 * 60 * 1000;
+      const nineHoursInMs = 9 * 60 * 60 * 1000;
+      const thirtyMinutesInMs = 30 * 60 * 1000;
+      const fortyFiveMinutesInMs = 45 * 60 * 1000;
+      
+      // Prüfung 2 zuerst (spezifischer)
+      if (totalWorkTime > nineHoursInMs && totalBreakTime < fortyFiveMinutesInMs) {
+        const breakMinutes = Math.floor(totalBreakTime / (1000 * 60));
+        const workHours = (totalWorkTime / (1000 * 60 * 60)).toFixed(1);
+        return `⚠️ Zu wenig Pause: Bei ${workHours}h Arbeit nur ${breakMinutes}min Pause (mind. 45min erforderlich)`;
+      }
+      
+      // Prüfung 1
+      if (totalWorkTime > sixHoursInMs && totalBreakTime < thirtyMinutesInMs) {
+        const breakMinutes = Math.floor(totalBreakTime / (1000 * 60));
+        const workHours = (totalWorkTime / (1000 * 60 * 60)).toFixed(1);
+        return `⚠️ Zu wenig Pause: Bei ${workHours}h Arbeit nur ${breakMinutes}min Pause (mind. 30min erforderlich)`;
+      }
+      
+      lastEndTime = blockEnd;
+    }
+    
+    return null;
+  }
 }

@@ -41,7 +41,9 @@
       <div class="time-header"></div>
       <div *ngFor="let day of currentWeek.days" 
            class="day-header text-center fw-bold py-2"
-           [class.weekend-header]="isWeekendDay(day)">
+           [class.weekend-header]="isWeekendDay(day)"
+           [class.violation-warning]="getDayHeaderClass(day) === 'violation-warning'"
+           [title]="getViolationMessage(day)">
         {{ formatDayHeader(day) }}
       </div>
 
