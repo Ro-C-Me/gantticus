@@ -532,9 +532,13 @@ export class WorkTimeService {
 
   /**
    * Konvertiert ein Date-Objekt in einen ISO-Date-String (YYYY-MM-DD)
+   * Verwendet lokale Zeitzone, um Verschiebungen durch Sommer-/Winterzeit zu vermeiden.
    */
   private toDateString(date: Date): string {
-    return date.toISOString().split('T')[0];
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   /**
@@ -670,7 +674,10 @@ export class WorkTimeService {
     
     // Durchlaufe alle Blöcke im Zeitraum
     data.blocks.forEach(block => {
-      const blockDate = new Date(block.date);
+      //Parse block.date als lokale Mitternacht (nicht UTC), damit der Vergleich
+      // mit startDate/endDate (lokale Mitternacht) konsistent ist.
+      const [y, m, d] = block.date.split('-').map(Number);
+      const blockDate = new Date(y, m - 1, d, 0, 0, 0, 0);
       
       // Nur Blöcke innerhalb des Zeitraums
       if (blockDate < startDate || blockDate > endDate) {
@@ -1023,7 +1030,9 @@ export class WorkTimeService {
     
     // Filter: Behalte nur Blöcke, die am oder nach dem Grenz-Montag liegen
     const filteredBlocks = data.blocks.filter(block => {
-      const blockDate = new Date(block.date);
+      // Parse block.date als lokale Mitternacht (nicht UTC)
+      const [y, m, d] = block.date.split('-').map(Number);
+      const blockDate = new Date(y, m - 1, d);
       return blockDate >= cutoffMonday;
     });
     

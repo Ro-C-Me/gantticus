@@ -137,7 +137,10 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
   
   getDayKey(date: Date): string {
-    return date.toISOString().split('T')[0]; // YYYY-MM-DD
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`; // YYYY-MM-DD (lokale Zeit)
   }
   
   getDayBlocks(date: Date): WorkTimeBlock[] {
@@ -402,7 +405,9 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
       return null; // Laufende Blöcke haben keinen Nachfolger
     }
 
-    const dayBlocks = this.getDayBlocks(new Date(block.date));
+    // Parse block.date als lokale Mitternacht (nicht UTC)
+    const [y, m, d] = block.date.split('-').map(Number);
+    const dayBlocks = this.getDayBlocks(new Date(y, m - 1, d));
     
     // Finde Block, dessen Start gleich dem Ende dieses Blocks ist
     return dayBlocks.find(b => b.start === block.end) || null;

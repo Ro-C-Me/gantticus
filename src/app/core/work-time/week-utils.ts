@@ -45,19 +45,19 @@ export function getMonday(date: Date): Date {
  * Erstellt ein WeekView-Objekt für eine gegebene Woche
  */
 export function getWeekView(year: number, weekNumber: number): WeekView {
-  // Finde den ersten Tag des Jahres
-  const jan4 = new Date(Date.UTC(year, 0, 4));
+  // Finde den Montag der KW 1: KW 1 enthält den 4. Januar (ISO 8601)
+  // Verwende lokale Zeit (Mitternacht), um Sommerzeitprobleme zu vermeiden
+  const jan4 = new Date(year, 0, 4, 0, 0, 0, 0);
   const monday = getMonday(jan4);
   
   // Addiere Wochen
   const weekStart = new Date(monday);
   weekStart.setDate(monday.getDate() + (weekNumber - 1) * 7);
   
-  // Erstelle Array mit allen 7 Tagen
+  // Erstelle Array mit allen 7 Tagen (jeweils Mitternacht Lokalzeit)
   const days: Date[] = [];
   for (let i = 0; i < 7; i++) {
-    const day = new Date(weekStart);
-    day.setDate(weekStart.getDate() + i);
+    const day = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i, 0, 0, 0, 0);
     days.push(day);
   }
   
