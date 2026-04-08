@@ -1,0 +1,208 @@
+<!-- Project Editor Modal -->
+<div class="modal fade" 
+     [class.show]="visible" 
+     [style.display]="visible ? 'block' : 'none'" 
+     tabindex="-1" 
+     role="dialog" 
+     (click)="close()"
+     (keydown)="onModalKeydown($event)">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      
+      <!-- Header -->
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-gear me-2"></i>
+          Projekte verwalten
+        </h5>
+        <button type="button" class="btn-close" (click)="close()"></button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body p-0">
+
+        <!-- Projekt-Liste -->
+        <div class="list-group list-group-flush">
+
+          <!-- Keine Projekte Hinweis -->
+          <div class="list-group-item text-center text-muted py-4" *ngIf="projects.length === 0 && !showNewProject">
+            <i class="bi bi-folder2-open d-block mb-2" style="font-size: 2rem;"></i>
+            Noch keine Projekte vorhanden.
+          </div>
+
+          <ng-container *ngFor="let project of projects">
+
+            <!-- Normaler Zustand -->
+            <div class="list-group-item project-row d-flex align-items-center py-2"
+                 *ngIf="editingProject !== project.name && confirmingDelete !== project.name">
+              
+              <!-- Farbpunkt -->
+              <span class="color-dot me-3" [style.background-color]="project.color"></span>
+              
+              <!-- Name + Details -->
+              <div class="flex-grow-1 min-width-0">
+                <div class="fw-semibold text-truncate">{{ project.name }}</div>
+                <small class="text-muted">{{ getBlockCount(project.name) }} Zeitblöcke</small>
+                <a *ngIf="project.url" 
+                   [href]="project.url" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="ms-2 small text-decoration-none"
+                   (click)="$event.stopPropagation()"
+                   title="Projekt-Link öffnen">
+                  <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+              </div>
+              
+              <!-- Aktionen -->
+              <div class="project-actions d-flex gap-1">
+                <button class="btn btn-sm btn-outline-primary" 
+                        (click)="startEdit(project)" 
+                        title="Bearbeiten">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" 
+                        (click)="startDelete(project.name)" 
+                        title="Löschen">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Edit-Modus -->
+            <div class="list-group-item project-edit-row py-2"
+                 *ngIf="editingProject === project.name">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <!-- Farbpicker -->
+                <button type="button"
+                        class="btn color-picker-btn border-0 p-0 flex-shrink-0"
+                        [style.background-color]="editColor"
+                        [colorPicker]="editColor"
+                        (colorPickerChange)="onEditColorChange($event)"
+                        [cpPosition]="'bottom'"
+                        [cpOutputFormat]="'hex'"
+                        [cpAlphaChannel]="'disabled'"
+                        title="Farbe wählen">
+                </button>
+                <!-- Name Input -->
+                <input type="text"
+                       class="form-control form-control-sm project-edit-name-input"
+                       [(ngModel)]="editName"
+                       (keydown)="onEditKeydown($event)"
+                       maxlength="50"
+                       placeholder="Projektname..." />
+              </div>
+              <!-- URL Input -->
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-link-45deg text-muted flex-shrink-0"></i>
+                <input type="url"
+                       class="form-control form-control-sm"
+                       [(ngModel)]="editUrl"
+                       (keydown)="onEditKeydown($event)"
+                       placeholder="Projekt-URL (optional)..." />
+              </div>
+              <!-- Fehlertext -->
+              <div class="text-danger small mb-2" *ngIf="editError">
+                <i class="bi bi-exclamation-circle me-1"></i>{{ editError }}
+              </div>
+              <!-- Buttons -->
+              <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-sm btn-secondary" (click)="cancelEdit()">Abbrechen</button>
+                <button class="btn btn-sm btn-primary" (click)="saveEdit()">
+                  <i class="bi bi-check-lg me-1"></i>Speichern
+                </button>
+              </div>
+            </div>
+
+            <!-- Delete-Bestätigung -->
+            <div class="list-group-item project-delete-row py-2 bg-danger-subtle"
+                 *ngIf="confirmingDelete === project.name">
+              <div class="d-flex align-items-center mb-2">
+                <span class="color-dot me-3" [style.background-color]="project.color"></span>
+                <div class="flex-grow-1">
+                  <div class="text-danger fw-semibold">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    „{{ project.name }}" wirklich löschen?
+                  </div>
+                  <small class="text-muted">
+                    {{ getBlockCount(project.name) }} Zeitblöcke werden auf „Nicht zugeordnet" gesetzt.
+                  </small>
+                </div>
+              </div>
+              <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-sm btn-secondary" (click)="cancelDelete()">Abbrechen</button>
+                <button class="btn btn-sm btn-danger" (click)="confirmDelete()">
+                  <i class="bi bi-trash me-1"></i>Löschen
+                </button>
+              </div>
+            </div>
+
+          </ng-container>
+
+          <!-- Neues Projekt: Formular -->
+          <div class="list-group-item project-edit-row py-2" *ngIf="showNewProject">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <!-- Farbpicker -->
+              <button type="button"
+                      class="btn color-picker-btn border-0 p-0 flex-shrink-0"
+                      [style.background-color]="newProjectColor"
+                      [colorPicker]="newProjectColor"
+                      (colorPickerChange)="onNewProjectColorChange($event)"
+                      [cpPosition]="'bottom'"
+                      [cpOutputFormat]="'hex'"
+                      [cpAlphaChannel]="'disabled'"
+                      title="Farbe wählen">
+              </button>
+              <!-- Name Input -->
+              <input type="text"
+                     class="form-control form-control-sm new-project-name-input"
+                     [(ngModel)]="newProjectName"
+                     (keydown)="onNewProjectKeydown($event)"
+                     maxlength="50"
+                     placeholder="Neuer Projektname..." />
+            </div>
+            <!-- URL Input -->
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-link-45deg text-muted flex-shrink-0"></i>
+              <input type="url"
+                     class="form-control form-control-sm"
+                     [(ngModel)]="newProjectUrl"
+                     (keydown)="onNewProjectKeydown($event)"
+                     placeholder="Projekt-URL (optional)..." />
+            </div>
+            <!-- Fehlertext -->
+            <div class="text-danger small mb-2" *ngIf="newProjectError">
+              <i class="bi bi-exclamation-circle me-1"></i>{{ newProjectError }}
+            </div>
+            <!-- Buttons -->
+            <div class="d-flex justify-content-end gap-2">
+              <button class="btn btn-sm btn-secondary" (click)="cancelNewProject()">Abbrechen</button>
+              <button class="btn btn-sm btn-success" (click)="createNewProject()">
+                <i class="bi bi-plus-lg me-1"></i>Erstellen
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer d-flex justify-content-between">
+        <button type="button" 
+                class="btn btn-sm btn-success" 
+                (click)="startNewProject()"
+                *ngIf="!showNewProject">
+          <i class="bi bi-plus-circle me-1"></i>Neues Projekt
+        </button>
+        <span *ngIf="showNewProject"></span>
+        <button type="button" class="btn btn-secondary" (click)="close()">
+          Schließen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" 
+     [class.show]="visible" 
+     *ngIf="visible" 
+     (click)="close()"></div>

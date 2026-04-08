@@ -1,0 +1,52 @@
+.color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.color-picker-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid rgba(0, 0, 0, 0.2) !important;
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: rgba(0, 0, 0, 0.5) !important;
+  }
+}
+
+.project-row {
+  transition: background-color 0.15s ease;
+
+  .project-actions {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  &:hover {
+    background-color: var(--bs-gray-100);
+
+    .project-actions {
+      opacity: 1;
+    }
+  }
+}
+
+.project-edit-row,
+.project-delete-row {
+  .form-control {
+    min-width: 0;
+  }
+}
+
+// Modal spezifisch: mindestens 200px Höhe für die Liste
+.modal-body {
+  min-height: 150px;
+  max-height: 60vh;
+  overflow-y: auto;
+}

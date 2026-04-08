@@ -17,6 +17,7 @@ export class ProjectSelectorComponent implements OnInit, OnDestroy {
   @Input() placeholder: string = 'Projekt auswählen';
   @Input() size: 'sm' | 'md' = 'sm';
   @Output() projectSelected = new EventEmitter<string>();
+  @Output() manageProjects = new EventEmitter<void>();
   
   availableProjects: string[] = [];
   showNewProjectInput: boolean = false;
@@ -61,11 +62,16 @@ export class ProjectSelectorComponent implements OnInit, OnDestroy {
           input.focus();
         }
       }, 100);
+    } else if (value === '__manage__') {
+      // Dropdown zurücksetzen auf vorherigen Wert (nicht "__manage__" anzeigen)
+      // und Event emittieren
+      this.selectedProject = this.selectedProject; // Wert beibehalten
+      this.manageProjects.emit();
     } else {
       // Auch bei leerem String (Kein Projekt) das Event feuern
       this.showNewProjectInput = false;
       this.selectedProject = value;
-      this.projectSelected.emit(value); // Emittiert auch '', wenn "<Kein Projekt>" gewählt
+      this.projectSelected.emit(value);
     }
   }
   
@@ -89,8 +95,6 @@ export class ProjectSelectorComponent implements OnInit, OnDestroy {
     
     // Emit das neue Projekt
     this.projectSelected.emit(projectName);
-    
-    // Projekte werden automatisch über state$-Subscription neu geladen
   }
   
   /**
@@ -99,6 +103,13 @@ export class ProjectSelectorComponent implements OnInit, OnDestroy {
   cancelNewProject(): void {
     this.showNewProjectInput = false;
     this.newProjectName = '';
+  }
+
+  /**
+   * Öffnet den Projekt-Editor
+   */
+  onManageProjects(): void {
+    this.manageProjects.emit();
   }
   
   /**

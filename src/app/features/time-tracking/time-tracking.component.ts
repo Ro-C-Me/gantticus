@@ -57,6 +57,10 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   projectModalBlock: WorkTimeBlock | null = null;
   selectedProject: string = '';
   selectedColor: string = '';
+  selectedUrl: string = '';
+
+  // Project Editor Modal State
+  showProjectEditor: boolean = false;
   
   private subscription?: Subscription;
   
@@ -264,6 +268,10 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     );
   }
 
+  getProjectUrl(projectName: string): string {
+    return this.workTimeService.getProjectUrl(projectName) || '';
+  }
+
   getDayTotal(date: Date): number {
     const dateStr = this.getDayKey(date);
     const projectSummaries = this.getProjectOverview();
@@ -286,6 +294,7 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.projectModalBlock = block;
     this.selectedProject = block.projectName || '';
     this.selectedColor = block.projectName ? this.workTimeService.getProjectColor(block.projectName) : '';
+    this.selectedUrl = block.projectName ? (this.workTimeService.getProjectUrl(block.projectName) || '') : '';
     this.showProjectModal = true;
   }
 
@@ -301,6 +310,7 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
   onProjectSelectFromSelector(projectName: string): void {
     this.selectedProject = projectName;
     this.selectedColor = projectName ? this.workTimeService.getProjectColor(projectName) : '';
+    this.selectedUrl = projectName ? (this.workTimeService.getProjectUrl(projectName) || '') : '';
   }
 
   assignProject(): void {
@@ -327,8 +337,27 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  onUrlChange(url: string): void {
+    this.selectedUrl = url;
+
+    // Speichere URL sofort wenn Projekt bereits zugeordnet
+    if (this.selectedProject) {
+      this.workTimeService.setProjectUrl(this.selectedProject, url);
+    }
+  }
+
   getBlockColor(block: WorkTimeBlock): string {
     return this.workTimeService.getProjectColor(block.projectName);
+  }
+
+  /**
+   * Öffnet den Projekt-Editor aus dem Project Assignment Modal heraus.
+   * Schließt zuerst das Assignment-Modal, damit nicht zwei Modale übereinander liegen.
+   */
+  openProjectEditorFromModal(): void {
+    // Assignment-Modal temporär schließen
+    this.showProjectModal = false;
+    this.showProjectEditor = true;
   }
   
   // --- Resize-Funktionalität ---
@@ -514,6 +543,12 @@ export class TimeTrackingComponent implements OnInit, OnDestroy, AfterViewInit {
       // Projektübersicht Modal schließen
       if (this.showProjectOverviewModal) {
         this.closeProjectOverviewModal();
+        return;
+      }
+
+      // Projekt-Editor Modal schließen
+      if (this.showProjectEditor) {
+        this.showProjectEditor = false;
         return;
       }
     }

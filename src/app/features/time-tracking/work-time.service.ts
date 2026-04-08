@@ -49,6 +49,15 @@ export interface ProjectWeekSummary {
 }
 
 /**
+ * Repräsentiert ein Projekt in der Projekt-Registry
+ */
+export interface Project {
+  name: string;
+  color: string;
+  url?: string;             // Optionale URL zu externem Projektmanagement-Tool
+}
+
+/**
  * Service zur Verwaltung der Arbeitszeiterfassung
  * - Startet und stoppt Arbeitszeitblöcke
  * - Persistiert Daten im LocalStorage
@@ -59,7 +68,8 @@ export interface ProjectWeekSummary {
 })
 export class WorkTimeService {
   private readonly STORAGE_KEY = 'work-time-blocks';
-  private readonly COLORS_STORAGE_KEY = 'project-colors';
+  private readonly PROJECTS_STORAGE_KEY = 'projects';
+  private readonly LEGACY_COLORS_STORAGE_KEY = 'project-colors';
   
   // Aufbewahrungsdauer für Zeiterfassungsdaten in Kalenderwochen
   private readonly RETENTION_WEEKS = 6;
@@ -648,21 +658,6 @@ export class WorkTimeService {
   }
 
   /**
-   * Gibt alle registrierten Projektnamen zurück (aus der Projekt-Registry)
-   * Projekte werden registriert, sobald sie erstellt werden, unabhängig davon
-   * ob sie bereits einem Block zugewiesen wurden.
-   * @returns Array von Projektnamen (unique, sortiert)
-   */
-  getUsedProjectNames(): string[] {
-    const colors = this.loadProjectColors();
-    const projectNames = Array.from(colors.keys());
-    
-    return projectNames.sort((a, b) => 
-      a.localeCompare(b, 'de', { sensitivity: 'base' })
-    );
-  }
-
-  /**
    * Erstellt eine Projektübersicht über eine Woche
    * Gruppiert Arbeitszeiten nach Projekt und Tag
    * @param startDate Startdatum der Woche
@@ -730,34 +725,72 @@ export class WorkTimeService {
     return summaries;
   }
 
-  // --- Projekt-Farben Verwaltung ---
+  // --- Projekt-Verwaltung ---
 
   /**
-   * Lädt die Projekt-Farben aus dem LocalStorage
+   * Lädt Projekte aus dem LocalStorage.
+   * Migriert automatisch vom alten 'project-colors' Format falls nötig.
    */
-  private loadProjectColors(): Map<string, string> {
+  private loadProjects(): Project[] {
     try {
-      const stored = localStorage.getItem(this.COLORS_STORAGE_KEY);
+      const stored = localStorage.getItem(this.PROJECTS_STORAGE_KEY);
       if (stored) {
-        const obj = JSON.parse(stored);
-        return new Map(Object.entries(obj));
+        return JSON.parse(stored) as Project[];
+      }
+
+      // Migration: Prüfe ob alte 'project-colors' Daten existieren
+      const legacyStored = localStorage.getItem(this.LEGACY_COLORS_STORAGE_KEY);
+      if (legacyStored) {
+        const legacyObj = JSON.parse(legacyStored) as Record<string, string>;
+        const migrated: Project[] = Object.entries(legacyObj).map(([name, color]) => ({
+          name,
+          color
+        }));
+        // Speichere migrierte Daten im neuen Format
+        this.saveProjects(migrated);
+        // Entferne altes Format
+        localStorage.removeItem(this.LEGACY_COLORS_STORAGE_KEY);
+        console.log(`Migrated ${migrated.length} projects from legacy 'project-colors' to 'projects' format.`);
+        return migrated;
       }
     } catch (error) {
-      console.error('Failed to load project colors from storage:', error);
+      console.error('Failed to load projects from storage:', error);
     }
-    return new Map();
+    return [];
   }
 
   /**
-   * Speichert die Projekt-Farben im LocalStorage
+   * Speichert Projekte im LocalStorage
    */
-  private saveProjectColors(colors: Map<string, string>): void {
+  private saveProjects(projects: Project[]): void {
     try {
-      const obj = Object.fromEntries(colors);
-      localStorage.setItem(this.COLORS_STORAGE_KEY, JSON.stringify(obj));
+      localStorage.setItem(this.PROJECTS_STORAGE_KEY, JSON.stringify(projects));
     } catch (error) {
-      console.error('Failed to save project colors to storage:', error);
+      console.error('Failed to save projects to storage:', error);
     }
+  }
+
+  /**
+   * Gibt ein Projekt anhand des Namens zurück
+   */
+  getProject(projectName: string): Project | undefined {
+    return this.loadProjects().find(p => p.name === projectName);
+  }
+
+  /**
+   * Gibt alle registrierten Projekte zurück, sortiert nach Name
+   */
+  getAllProjects(): Project[] {
+    return this.loadProjects().sort((a, b) =>
+      a.name.localeCompare(b.name, 'de', { sensitivity: 'base' })
+    );
+  }
+
+  /**
+   * Gibt alle registrierten Projektnamen zurück (unique, sortiert)
+   */
+  getUsedProjectNames(): string[] {
+    return this.getAllProjects().map(p => p.name);
   }
 
   /**
@@ -769,57 +802,177 @@ export class WorkTimeService {
       return this.DEFAULT_UNASSIGNED_COLOR;
     }
 
-    const colors = this.loadProjectColors();
-    
-    if (!colors.has(projectName)) {
-      // Automatische Farbzuweisung
-      const newColor = this.getNextAvailableColor(colors);
-      colors.set(projectName, newColor);
-      this.saveProjectColors(colors);
+    const projects = this.loadProjects();
+    const project = projects.find(p => p.name === projectName);
+
+    if (!project) {
+      // Automatische Farbzuweisung + Registrierung
+      const usedColors = new Set(projects.map(p => p.color));
+      const newColor = this.getNextAvailableColor(usedColors);
+      projects.push({ name: projectName, color: newColor });
+      this.saveProjects(projects);
       return newColor;
     }
 
-    return colors.get(projectName)!;
+    return project.color;
+  }
+
+  /**
+   * Gibt die URL für ein Projekt zurück (oder undefined)
+   */
+  getProjectUrl(projectName: string | null | undefined): string | undefined {
+    if (!projectName) return undefined;
+    const project = this.getProject(projectName);
+    return project?.url;
   }
 
   /**
    * Setzt eine Farbe für ein Projekt
    */
   setProjectColor(projectName: string, color: string): void {
-    if (!projectName || projectName.trim() === '') {
-      return;
+    if (!projectName || projectName.trim() === '') return;
+
+    const projects = this.loadProjects();
+    const project = projects.find(p => p.name === projectName);
+
+    if (project) {
+      project.color = color;
+    } else {
+      projects.push({ name: projectName, color });
     }
 
-    const colors = this.loadProjectColors();
-    colors.set(projectName, color);
-    this.saveProjectColors(colors);
+    this.saveProjects(projects);
+  }
+
+  /**
+   * Setzt eine URL für ein Projekt
+   */
+  setProjectUrl(projectName: string, url: string): void {
+    if (!projectName || projectName.trim() === '') return;
+
+    const projects = this.loadProjects();
+    const project = projects.find(p => p.name === projectName);
+
+    if (project) {
+      project.url = url.trim() || undefined;
+      this.saveProjects(projects);
+    }
+  }
+
+  /**
+   * Aktualisiert ein Projekt komplett (Name bleibt als Key erhalten)
+   */
+  updateProject(projectName: string, updates: Partial<Omit<Project, 'name'>>): void {
+    if (!projectName || projectName.trim() === '') return;
+
+    const projects = this.loadProjects();
+    const project = projects.find(p => p.name === projectName);
+
+    if (project) {
+      if (updates.color !== undefined) project.color = updates.color;
+      if (updates.url !== undefined) project.url = updates.url.trim() || undefined;
+      this.saveProjects(projects);
+      this.notifyStateChange();
+    }
   }
 
   /**
    * Registriert ein neues Projekt in der Projekt-Registry mit einer automatischen Farbe
-   * Wird verwendet, wenn ein neues Projekt erstellt wird, bevor es einem Block zugewiesen wurde
    */
   registerProject(projectName: string): void {
-    if (!projectName || projectName.trim() === '') {
-      return;
-    }
+    if (!projectName || projectName.trim() === '') return;
 
-    const colors = this.loadProjectColors();
-    
+    const projects = this.loadProjects();
+
     // Nur registrieren wenn noch nicht vorhanden
-    if (!colors.has(projectName)) {
-      const newColor = this.getNextAvailableColor(colors);
-      colors.set(projectName, newColor);
-      this.saveProjectColors(colors);
-      
-      // Trigger state update damit Komponenten reagieren können
+    if (!projects.some(p => p.name === projectName)) {
+      const usedColors = new Set(projects.map(p => p.color));
+      const newColor = this.getNextAvailableColor(usedColors);
+      projects.push({ name: projectName, color: newColor });
+      this.saveProjects(projects);
       this.notifyStateChange();
     }
   }
-  
+
+  /**
+   * Benennt ein Projekt um: Aktualisiert die Projekt-Registry und alle Blöcke
+   * @returns true wenn erfolgreich, false bei Fehler (z.B. neuer Name existiert bereits)
+   */
+  renameProject(oldName: string, newName: string): boolean {
+    if (!oldName || !newName || oldName.trim() === '' || newName.trim() === '') {
+      return false;
+    }
+
+    const trimmedOld = oldName.trim();
+    const trimmedNew = newName.trim();
+
+    if (trimmedOld === trimmedNew) return true;
+
+    const projects = this.loadProjects();
+
+    // Prüfe ob neuer Name bereits existiert
+    if (projects.some(p => p.name === trimmedNew)) {
+      return false;
+    }
+
+    const project = projects.find(p => p.name === trimmedOld);
+    if (project) {
+      project.name = trimmedNew;
+      this.saveProjects(projects);
+    }
+
+    // Alle Blöcke aktualisieren, die das alte Projekt referenzieren
+    const data = this.dataSubject.value;
+    let changed = false;
+    data.blocks.forEach(block => {
+      if (block.projectName === trimmedOld) {
+        block.projectName = trimmedNew;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      this.saveToStorage(data);
+    }
+
+    this.notifyStateChange();
+    return true;
+  }
+
+  /**
+   * Löscht ein Projekt: Entfernt es aus der Registry und setzt alle Blöcke
+   * mit diesem Projekt auf "Nicht zugeordnet" (projectName = undefined)
+   */
+  deleteProject(projectName: string): boolean {
+    if (!projectName || projectName.trim() === '') return false;
+
+    const trimmedName = projectName.trim();
+
+    // Aus Projekt-Registry entfernen
+    const projects = this.loadProjects();
+    const filtered = projects.filter(p => p.name !== trimmedName);
+    this.saveProjects(filtered);
+
+    // Alle Blöcke aktualisieren: projectName entfernen
+    const data = this.dataSubject.value;
+    let changed = false;
+    data.blocks.forEach(block => {
+      if (block.projectName === trimmedName) {
+        delete block.projectName;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      this.saveToStorage(data);
+    }
+
+    this.notifyStateChange();
+    return true;
+  }
+
   /**
    * Triggert ein State-Update ohne die Blöcke zu ändern
-   * Verwendet für Änderungen an Projekt-Registry
    */
   private notifyStateChange(): void {
     this.dataSubject.next(this.dataSubject.value);
@@ -828,21 +981,14 @@ export class WorkTimeService {
   /**
    * Gibt eine zufällige verfügbare Farbe aus der Palette zurück
    */
-  private getNextAvailableColor(colors: Map<string, string>): string {
-    const usedColors = new Set(colors.values());
-    
-    // Sammle alle ungenutzten Farben
+  private getNextAvailableColor(usedColors: Set<string>): string {
     const availableColors = this.COLOR_PALETTE.filter(color => !usedColors.has(color));
-    
+
     if (availableColors.length > 0) {
-      // Wähle zufällige ungenutzte Farbe
-      const randomIndex = Math.floor(Math.random() * availableColors.length);
-      return availableColors[randomIndex];
+      return availableColors[Math.floor(Math.random() * availableColors.length)];
     }
-    
-    // Alle Farben vergeben -> Wähle zufällige Farbe aus gesamter Palette
-    const randomIndex = Math.floor(Math.random() * this.COLOR_PALETTE.length);
-    return this.COLOR_PALETTE[randomIndex];
+
+    return this.COLOR_PALETTE[Math.floor(Math.random() * this.COLOR_PALETTE.length)];
   }
 
   /**
@@ -897,22 +1043,10 @@ export class WorkTimeService {
     });
     
     // Bereinige Projekt-Registry: Lösche Projekte ohne verbleibende Blöcke
-    const colors = this.loadProjectColors();
-    const initialProjectCount = colors.size;
-    const projectsToDelete: string[] = [];
-    
-    colors.forEach((color, projectName) => {
-      if (!remainingProjects.has(projectName)) {
-        projectsToDelete.push(projectName);
-      }
-    });
-    
-    // Lösche die Projekte
-    projectsToDelete.forEach(projectName => {
-      colors.delete(projectName);
-    });
-    
-    const deletedProjects = projectsToDelete.length;
+    const projects = this.loadProjects();
+    const initialProjectCount = projects.length;
+    const cleanedProjects = projects.filter(p => remainingProjects.has(p.name));
+    const deletedProjects = initialProjectCount - cleanedProjects.length;
     
     // Speichere gefilterte Blöcke
     if (deletedBlocks > 0) {
@@ -923,7 +1057,7 @@ export class WorkTimeService {
     
     // Speichere bereinigte Projekt-Registry
     if (deletedProjects > 0) {
-      this.saveProjectColors(colors);
+      this.saveProjects(cleanedProjects);
     }
     
     return { deletedBlocks, deletedProjects };

@@ -158,6 +158,9 @@
           <button class="btn btn-sm btn-outline-success" (click)="openProjectOverviewModal()">
             <i class="bi bi-folder"></i> Projektübersicht
           </button>
+          <button class="btn btn-sm btn-outline-secondary" (click)="showProjectEditor = true">
+            <i class="bi bi-gear"></i> Projekte verwalten
+          </button>
         </div>
       </div>
     </div>
@@ -245,13 +248,14 @@
           <div class="fw-bold">{{ formatBlockTime(projectModalBlock) }}</div>
         </div>
 
-        <!-- Projekt-Auswahl mit neuer Komponente -->
+        <!-- Projekt-Auswahl -->
         <div class="mb-3">
           <label class="form-label">Projekt zuordnen:</label>
           <app-project-selector
             [selectedProject]="selectedProject"
             [allowNewProject]="true"
             (projectSelected)="onProjectSelectFromSelector($event)"
+            (manageProjects)="openProjectEditorFromModal()"
             size="md"
           ></app-project-selector>
         </div>
@@ -272,6 +276,26 @@
               <i class="bi bi-palette text-white"></i>
             </button>
             <span class="small text-muted">{{ selectedColor }}</span>
+          </div>
+        </div>
+
+        <div class="mb-3" *ngIf="selectedProject">
+          <label class="form-label">Projekt-URL:</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+            <input type="url" 
+                   class="form-control" 
+                   placeholder="https://..."
+                   [ngModel]="selectedUrl"
+                   (ngModelChange)="onUrlChange($event)">
+            <a *ngIf="selectedUrl" 
+               class="btn btn-outline-secondary" 
+               [href]="selectedUrl" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               title="URL öffnen">
+              <i class="bi bi-box-arrow-up-right"></i>
+            </a>
           </div>
         </div>
       </div>
@@ -317,7 +341,16 @@
             </thead>
             <tbody>
               <tr *ngFor="let project of getProjectOverview()">
-                <td class="fw-bold">{{ project.projectName }}</td>
+                <td class="fw-bold">
+                  <a *ngIf="getProjectUrl(project.projectName) as url"
+                     [href]="url"
+                     target="_blank"
+                     rel="noopener noreferrer"
+                     class="text-decoration-none">
+                    {{ project.projectName }} <i class="bi bi-box-arrow-up-right small"></i>
+                  </a>
+                  <span *ngIf="!getProjectUrl(project.projectName)">{{ project.projectName }}</span>
+                </td>
                 <td *ngFor="let day of currentWeek.days" class="text-center">
                   <ng-container *ngIf="project.dailyMs.get(getDayKey(day)) as ms">
                     {{ formatDecimalHours(ms) }}
@@ -361,3 +394,8 @@
 </div>
 <div class="modal-backdrop fade" [class.show]="showProjectOverviewModal" 
      *ngIf="showProjectOverviewModal" (click)="closeProjectOverviewModal()"></div>
+
+<!-- Projekt-Editor Modal -->
+<app-project-editor-modal
+  [(visible)]="showProjectEditor"
+></app-project-editor-modal>

@@ -5,6 +5,7 @@
     [selectedProject]="selectedProjectName"
     [allowNewProject]="false"
     (projectSelected)="onProjectSelected($event)"
+    (manageProjects)="openProjectEditor()"
     size="sm"
   ></app-project-selector>
 
@@ -14,6 +15,7 @@
     [selectedProject]="selectedProjectName"
     [allowNewProject]="true"
     (projectSelected)="onRunningProjectSelected($event)"
+    (manageProjects)="openProjectEditor()"
     size="sm"
   ></app-project-selector>
 
@@ -72,3 +74,8 @@
     </div>
   </div>
 </ng-template>
+
+<!-- Projekt-Editor Modal -->
+<app-project-editor-modal
+  [(visible)]="showProjectEditor"
+></app-project-editor-modal>

@@ -16,6 +16,9 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
   
   // Projekt-Auswahl
   selectedProjectName: string = '';
+
+  // Projekt-Editor Modal
+  showProjectEditor: boolean = false;
   
   private subscriptions = new Subscription();
 
@@ -89,6 +92,13 @@ export class TimerWidgetComponent implements OnInit, OnDestroy {
   onStopWork(): void {
     this.workTimeService.stopWork();
     this.updateState();
+  }
+
+  /**
+   * Öffnet den Projekt-Editor
+   */
+  openProjectEditor(): void {
+    this.showProjectEditor = true;
   }
 
   /**

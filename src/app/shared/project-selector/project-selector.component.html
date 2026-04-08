@@ -13,6 +13,7 @@
         {{ project }}
       </option>
       <option *ngIf="allowNewProject" value="__new__">+ Neues Projekt</option>
+      <option value="__manage__">⚙ Projekte verwalten</option>
     </select>
   </div>
 
@@ -30,16 +31,14 @@
       maxlength="50"
     />
     <button 
-      class="btn btn-success"
-      [class]="getSizeClass()"
+      class="btn btn-success btn-sm"
       (click)="createNewProject()"
       title="Erstellen"
     >
       <i class="bi bi-check"></i>
     </button>
     <button 
-      class="btn btn-secondary"
-      [class]="getSizeClass()"
+      class="btn btn-secondary btn-sm"
       (click)="cancelNewProject()"
       title="Abbrechen"
     >
